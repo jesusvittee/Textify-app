@@ -1,0 +1,40 @@
+📁 app
+ ┣ 📁 interfaz_usuario
+ ┃ ┣ 📁 componentes        ← botones, tarjetas, barra de navegación reutilizable
+ ┃ ┣ 📁 pantallas          ← Inicio, Login, Perfil, etc.
+ ┃ ┗ 📁 tema               ← colores, tipografías, estilos globales
+ ┃
+ ┣ 📁 modelos_vista        ← ViewModel (manejo del estado de la UI)
+ ┃
+ ┣ 📁 dominio
+ ┃ ┣ 📁 modelos            ← modelos limpios (sin dependencias)
+ ┃ ┗ 📁 casos_uso          ← lógica de negocio
+ ┃
+ ┣ 📁 datos
+ ┃ ┣ 📁 local              ← base de datos local (Room)
+ ┃ ┃ ┣ 📁 entidades        ← tablas
+ ┃ ┃ ┣ 📁 consultas        ← DAO (consultas tipo SQL)
+ ┃ ┃ ┗ 📁 base_datos       ← configuración de la BD
+ ┃ ┃
+ ┃ ┣ 📁 remoto             ← conexión a internet
+ ┃ ┃ ┣ 📁 api              ← endpoints (Retrofit)
+ ┃ ┃ ┗ 📁 dtos             ← datos del servidor (JSON)
+ ┃ ┃
+ ┃ ┗ 📁 repositorios       ← conecta datos local + remoto
+ ┃
+ ┣ 📁 ia                   ← funciones de inteligencia artificial
+ ┃ ┣ 📁 voz_a_texto        ← reconocimiento de voz
+ ┃ ┣ 📁 texto_a_voz        ← síntesis de voz
+ ┃ ┗ 📁 modelos_ia         ← integración con APIs externas
+ ┃
+ ┣ 📁 servicios            ← acceso a hardware y sistema
+ ┃ ┣ 📁 audio              ← control de reproducción
+ ┃ ┗ 📁 permisos           ← micrófono, internet, etc.
+ ┃
+ ┣ 📁 utilidades           ← funciones auxiliares (helpers, constantes)
+ ┃
+ ┗ 📁 recursos
+   ┣ 📁 imagenes           ← iconos e imágenes
+   ┣ 📁 icono_app          ← icono de la app
+   ┣ 📁 valores            ← colores, textos globales
+   ┗ 📁 fuentes            ← tipografías
