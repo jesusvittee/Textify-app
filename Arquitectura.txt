@@ -1,0 +1,10 @@
+Arquitectura: Clean Architecture + MVVM
+UI: Jetpack Compose (no XML — más moderno y alineado a tu mockup)
+Base de datos local: Room
+Base de datos remota: Firebase Firestore (ideal para sincronización en tiempo real y autenticación)
+TTS con voz humana: ElevenLabs API (la mejor opción para voz realista) o Google Cloud TTS
+STT (voz a texto): Android SpeechRecognizer (nativo) o Whisper API
+Networking: Retrofit + OkHttp
+DI (Inyección de dependencias): Hilt
+Navegación: Navigation Compose
+Audio: MediaPlayer / ExoPlayer
