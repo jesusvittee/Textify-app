@@ -1,9 +1,12 @@
 package com.textify.app.domain.usecase
 
+import com.textify.app.ai.tts.TextToSpeechManager
 import com.textify.app.domain.model.Phrase
 
-class PlayPhraseUseCase {
+class PlayPhraseUseCase(
+    private val ttsManager: TextToSpeechManager
+) {
     operator fun invoke(phrase: Phrase) {
-        // Lógica para reproducir la frase (TTS)
+        ttsManager.speak(phrase.text)
     }
 }

@@ -8,18 +8,19 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val EsquemaClaro = lightColorScheme(
     primary = AzulOscuro,
-    onPrimary = FondoClaro,
+    onPrimary = Color.White,
     secondary = AzulMedio,
-    onSecondary = FondoClaro,
+    onSecondary = Color.White,
     tertiary = Verde,
-    background = FondoClaro,
-    surface = FondoGris,
+    background = FondoClaro, // El gris tenue del fondo de chats
+    surface = Color.White,   // Blanco para barras inferiores y tarjetas
     onBackground = TextoPrimario,
     onSurface = TextoPrimario
 )
@@ -32,8 +33,8 @@ private val EsquemaOscuro = darkColorScheme(
     tertiary = Verde,
     background = FondoOscuro,
     surface = SuperficieOscura,
-    onBackground = FondoClaro,
-    onSurface = FondoClaro
+    onBackground = Color.White,
+    onSurface = Color.White
 )
 
 @Composable
@@ -55,7 +56,7 @@ fun TextifyTheme(
             if (window != null) {
                 window.statusBarColor = esquemaColores.primary.toArgb()
                 WindowCompat.getInsetsController(window, view)
-                    .isAppearanceLightStatusBars = !darkTheme
+                    .isAppearanceLightStatusBars = false // Siempre falso para que los iconos sean blancos sobre el azul oscuro
             }
         }
     }
