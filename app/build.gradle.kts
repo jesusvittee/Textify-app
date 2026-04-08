@@ -1,10 +1,11 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "com.example.textify"
+    namespace = "com.textify.app"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -57,9 +58,16 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Navegacion
-    implementation("androidx.navigation:navigation-compose:2.9.7")
+    // Navegación
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
     // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.compose.material.icons)
+    ksp(libs.androidx.room.compiler)
 }

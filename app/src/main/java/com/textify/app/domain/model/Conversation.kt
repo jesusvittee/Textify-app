@@ -1,4 +1,9 @@
 package com.textify.app.domain.model
 
-class Conversation {
-}
+data class Conversation(
+    val id: String,
+    val participantName: String,
+    val lastMessage: String,
+    val lastMessageTime: Long = System.currentTimeMillis(),
+    val unreadCount: Int = 0
+)

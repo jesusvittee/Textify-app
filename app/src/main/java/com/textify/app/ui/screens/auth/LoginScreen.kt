@@ -14,8 +14,10 @@ import androidx.compose.ui.unit.sp
 import com.textify.app.ui.theme.*
 
 @Composable
-fun RegisterScreen(onNavigateToLogin: () -> Unit) {
-    var name by remember { mutableStateOf("") }
+fun LoginScreen(
+    onNavigateToHome: () -> Unit,
+    onNavigateToRegister: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -28,35 +30,31 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Crear cuenta",
+            text = "Bienvenido",
             color = FondoClaro,
             fontSize = 22.sp,
             fontWeight = FontWeight.Medium
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nombre", color = AzulClaro) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AzulClaro,
-                unfocusedBorderColor = AzulMedio,
-                focusedTextColor = FondoClaro,
-                unfocusedTextColor = FondoClaro
-            ),
-            singleLine = true
+        Text(
+            text = "Inicia sesión para continuar",
+            color = AzulClaro,
+            fontSize = 12.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
+        // Campo email
+        Text(
+            text = "Correo electrónico",
+            color = AzulClaro,
+            fontSize = 12.sp,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Correo electrónico", color = AzulClaro) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -68,12 +66,19 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit) {
             singleLine = true
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
+        // Campo contraseña
+        Text(
+            text = "Contraseña",
+            color = AzulClaro,
+            fontSize = 12.sp,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Contraseña", color = AzulClaro) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
             visualTransformation = PasswordVisualTransformation(),
@@ -88,8 +93,9 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Botón ingresar
         Button(
-            onClick = onNavigateToLogin,
+            onClick = onNavigateToHome,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -97,7 +103,7 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = Verde)
         ) {
             Text(
-                text = "Registrarme",
+                text = "Ingresar",
                 color = AzulOscuro,
                 fontWeight = FontWeight.Medium
             )
@@ -105,9 +111,9 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextButton(onClick = onNavigateToLogin) {
+        TextButton(onClick = onNavigateToRegister) {
             Text(
-                text = "¿Ya tienes cuenta? Inicia sesión",
+                text = "¿No tienes cuenta? Regístrate",
                 color = AzulClaro,
                 fontSize = 13.sp
             )

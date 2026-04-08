@@ -1,4 +1,7 @@
 package com.textify.app.domain.usecase
 
-class PlayPhraseUseCase {
+class TranscribeAudioUseCase {
+    operator fun invoke(audioText: String): String {
+        return audioText
+    }
 }

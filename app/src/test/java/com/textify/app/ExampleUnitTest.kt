@@ -1,4 +1,4 @@
-package com.example.textify
+package com.textify.app
 
 import org.junit.Test
 
