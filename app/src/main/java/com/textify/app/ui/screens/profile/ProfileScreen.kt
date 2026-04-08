@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -173,6 +174,16 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val voicesToShow = if (uiState.voiceGender == VoiceGender.FEMALE) uiState.femaleVoices else uiState.maleVoices
+                    voicesToShow.forEach { voice ->
+                        VoiceItem(
+                            voice = voice,
+                            selected = uiState.selectedVoiceId == voice.id,
+                            onClick = { viewModel.setSelectedVoice(voice.id) }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     SettingsSegmentedRow(
                         label = "Velocidad TTS",
                         options = listOf("Lenta", "Normal", "Rápida"),
@@ -188,6 +199,12 @@ fun ProfileScreen(
                                 else -> TtsSpeed.FAST
                             })
                         }
+                    )
+                    
+                    SettingsSwitchRow(
+                        label = "Alertas hápticas",
+                        checked = uiState.hapticAlerts,
+                        onCheckedChange = { viewModel.toggleHapticAlerts(it) }
                     )
                 }
             }
@@ -447,6 +464,49 @@ fun GenderButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
             Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selected) AzulMedio else TextoMuted)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (selected) AzulOscuro else TextoMuted)
+        }
+    }
+}
+
+@Composable
+fun VoiceItem(voice: VoiceOption, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) Verde else AzulClaro.copy(alpha = 0.1f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(AzulOscuro),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(voice.initial, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(voice.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextoPrimario)
+                Text(voice.description, fontSize = 12.sp, color = TextoMuted)
+            }
+            Surface(
+                modifier = Modifier.size(32.dp),
+                shape = CircleShape,
+                color = AzulMedio,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.padding(4.dp))
+            }
         }
     }
 }

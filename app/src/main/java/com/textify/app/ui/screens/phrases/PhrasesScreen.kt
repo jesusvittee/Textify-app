@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
@@ -16,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,25 +43,42 @@ fun PhrasesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    OutlinedTextField(
+                    // Usamos BasicTextField para evitar el recorte (clipping) del texto en alturas pequeñas
+                    BasicTextField(
                         value = searchText,
                         onValueChange = { searchText = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(end = 16.dp)
-                            .height(44.dp),
-                        placeholder = { Text("Buscar frase...", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
-                        shape = RoundedCornerShape(22.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White.copy(alpha = 0.15f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.15f),
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        singleLine = true
+                            .height(40.dp)
+                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp)),
+                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+                        singleLine = true,
+                        cursorBrush = SolidColor(Color.White),
+                        decorationBox = { innerTextField ->
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(modifier = Modifier.weight(1f)) {
+                                    if (searchText.isEmpty()) {
+                                        Text(
+                                            text = "Buscar frase...",
+                                            color = Color.White.copy(alpha = 0.6f),
+                                            fontSize = 15.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        }
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -67,7 +87,6 @@ fun PhrasesScreen(
             )
         },
         bottomBar = {
-            // Aplicamos el padding para que no quede detrás de la barra de navegación
             Box(modifier = Modifier.padding(bottom = contentPadding.calculateBottomPadding())) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),

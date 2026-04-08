@@ -22,7 +22,7 @@ data class ProfileUiState(
     val userType: UserType = UserType.DEAF,
     val isDarkMode: Boolean = false,
     val highContrast: Boolean = true,
-    val fontSize: FontSize = FontSize.SMALL,
+    val fontSize: FontSize = FontSize.MEDIUM,
     val voiceGender: VoiceGender = VoiceGender.FEMALE,
     val selectedVoiceId: String = "sofia",
     val ttsSpeed: TtsSpeed = TtsSpeed.NORMAL,
@@ -30,10 +30,15 @@ data class ProfileUiState(
     val localHistory: Boolean = true,
     val autoCleanupDays: Int = 30,
     val appLanguage: String = "Español (México)",
-    val voices: List<VoiceOption> = listOf(
+    val femaleVoices: List<VoiceOption> = listOf(
         VoiceOption("sofia", "Sofía", "Voz suave y cálida", "S"),
         VoiceOption("valentina", "Valentina", "Voz clara y natural", "V"),
         VoiceOption("camila", "Camila", "Voz expresiva y amigable", "C")
+    ),
+    val maleVoices: List<VoiceOption> = listOf(
+        VoiceOption("alejandro", "Alejandro", "Voz grave y firme", "A"),
+        VoiceOption("diego", "Diego", "Voz clara y profesional", "D"),
+        VoiceOption("mateo", "Mateo", "Voz amigable y cercana", "M")
     )
 )
 
@@ -58,7 +63,8 @@ class ProfileViewModel : ViewModel() {
     }
 
     fun setVoiceGender(gender: VoiceGender) {
-        _uiState.value = _uiState.value.copy(voiceGender = gender)
+        val defaultId = if (gender == VoiceGender.FEMALE) "sofia" else "alejandro"
+        _uiState.value = _uiState.value.copy(voiceGender = gender, selectedVoiceId = defaultId)
     }
 
     fun setSelectedVoice(voiceId: String) {
