@@ -1,7 +1,9 @@
 package com.textify.app.domain.usecase
 
-class TranscribeAudioUseCase {
-    operator fun invoke(audioText: String): String {
-        return audioText
+import com.textify.app.domain.model.Phrase
+
+class PlayPhraseUseCase {
+    operator fun invoke(phrase: Phrase) {
+        // Lógica para reproducir la frase (TTS)
     }
 }

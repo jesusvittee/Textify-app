@@ -1,6 +1,7 @@
 package com.textify.app.ui.theme
 
 import android.app.Activity
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -45,10 +46,17 @@ fun TextifyTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = esquemaColores.primary.toArgb()
-            WindowCompat.getInsetsController(window, view)
-                .isAppearanceLightStatusBars = !darkTheme
+            var context = view.context
+            while (context is ContextWrapper) {
+                if (context is Activity) break
+                context = context.baseContext
+            }
+            val window = (context as? Activity)?.window
+            if (window != null) {
+                window.statusBarColor = esquemaColores.primary.toArgb()
+                WindowCompat.getInsetsController(window, view)
+                    .isAppearanceLightStatusBars = !darkTheme
+            }
         }
     }
 

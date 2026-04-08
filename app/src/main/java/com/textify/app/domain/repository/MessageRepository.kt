@@ -1,9 +1,9 @@
 package com.textify.app.domain.repository
 
-import com.textify.app.domain.model.Phrase
+import com.textify.app.domain.model.Message
 
-interface PhraseRepository {
-    suspend fun getPhrases(): List<Phrase>
-    suspend fun addPhrase(phrase: Phrase)
-    suspend fun deletePhrase(phraseId: String)
+interface MessageRepository {
+    suspend fun getMessages(conversationId: String): List<Message>
+    suspend fun sendMessage(message: Message)
+    suspend fun deleteMessage(messageId: String)
 }

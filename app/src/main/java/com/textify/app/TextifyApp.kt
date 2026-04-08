@@ -1,4 +1,9 @@
 package com.textify.app
 
-class TextifyApp {
+import android.app.Application
+
+class TextifyApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+    }
 }
