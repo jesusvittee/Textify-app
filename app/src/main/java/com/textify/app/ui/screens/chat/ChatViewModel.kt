@@ -51,9 +51,9 @@ class ChatViewModel(
                 val filteredList = list.filter { it.lastMessage.isNotEmpty() }
                 _uiState.value = _uiState.value.copy(conversations = filteredList)
                 
-                if (filteredList.isNotEmpty() && _uiState.value.currentConversation == null) {
-                    selectConversation(filteredList.first())
-                } else if (filteredList.isEmpty() && _uiState.value.currentConversation == null) {
+                // Al iniciar la app (cuando currentConversation es null), 
+                // siempre empezamos con una nueva conversación vacía por defecto
+                if (_uiState.value.currentConversation == null) {
                     createNewConversation("Textify")
                 }
             }
@@ -155,7 +155,6 @@ class ChatViewModel(
     }
 
     private suspend fun updateConversationData(id: String, lastMsg: String, name: String) {
-        // Buscamos tanto en la lista filtrada como fuera si es necesario
         updateConversationUseCase(ConversationEntity(
             id = id,
             participantName = name,

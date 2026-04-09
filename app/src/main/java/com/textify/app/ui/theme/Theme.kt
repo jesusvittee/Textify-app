@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -11,6 +12,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
 private val EsquemaClaro = lightColorScheme(
@@ -19,8 +21,8 @@ private val EsquemaClaro = lightColorScheme(
     secondary = AzulMedio,
     onSecondary = Color.White,
     tertiary = Verde,
-    background = FondoClaro, // El gris tenue del fondo de chats
-    surface = Color.White,   // Blanco para barras inferiores y tarjetas
+    background = FondoClaro,
+    surface = Color.White,
     onBackground = TextoPrimario,
     onSurface = TextoPrimario
 )
@@ -38,8 +40,31 @@ private val EsquemaOscuro = darkColorScheme(
 )
 
 @Composable
+fun scaledTypography(scale: Float): Typography {
+    val base = Typography
+    return Typography(
+        displayLarge = base.displayLarge.copy(fontSize = base.displayLarge.fontSize * scale),
+        displayMedium = base.displayMedium.copy(fontSize = base.displayMedium.fontSize * scale),
+        displaySmall = base.displayLarge.copy(fontSize = base.displaySmall.fontSize * scale),
+        headlineLarge = base.headlineLarge.copy(fontSize = base.headlineLarge.fontSize * scale),
+        headlineMedium = base.headlineMedium.copy(fontSize = base.headlineMedium.fontSize * scale),
+        headlineSmall = base.headlineSmall.copy(fontSize = base.headlineSmall.fontSize * scale),
+        titleLarge = base.titleLarge.copy(fontSize = base.titleLarge.fontSize * scale),
+        titleMedium = base.titleMedium.copy(fontSize = base.titleMedium.fontSize * scale),
+        titleSmall = base.titleSmall.copy(fontSize = base.titleSmall.fontSize * scale),
+        bodyLarge = base.bodyLarge.copy(fontSize = base.bodyLarge.fontSize * scale),
+        bodyMedium = base.bodyMedium.copy(fontSize = base.bodyMedium.fontSize * scale),
+        bodySmall = base.bodySmall.copy(fontSize = base.bodySmall.fontSize * scale),
+        labelLarge = base.labelLarge.copy(fontSize = base.labelLarge.fontSize * scale),
+        labelMedium = base.labelMedium.copy(fontSize = base.labelMedium.fontSize * scale),
+        labelSmall = base.labelSmall.copy(fontSize = base.labelSmall.fontSize * scale)
+    )
+}
+
+@Composable
 fun TextifyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    fontScale: Float = 1.0f,
     content: @Composable () -> Unit
 ) {
     val esquemaColores = if (darkTheme) EsquemaOscuro else EsquemaClaro
@@ -56,14 +81,14 @@ fun TextifyTheme(
             if (window != null) {
                 window.statusBarColor = esquemaColores.primary.toArgb()
                 WindowCompat.getInsetsController(window, view)
-                    .isAppearanceLightStatusBars = false // Siempre falso para que los iconos sean blancos sobre el azul oscuro
+                    .isAppearanceLightStatusBars = false
             }
         }
     }
 
     MaterialTheme(
         colorScheme = esquemaColores,
-        typography = Typography,
+        typography = scaledTypography(fontScale),
         content = content
     )
 }

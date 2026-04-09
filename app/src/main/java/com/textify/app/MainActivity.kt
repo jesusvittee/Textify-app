@@ -50,7 +50,10 @@ class MainActivity : ComponentActivity() {
                 val profileViewModel: ProfileViewModel = viewModel()
                 val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
                 
-                TextifyTheme(darkTheme = uiState.isDarkMode) {
+                TextifyTheme(
+                    darkTheme = uiState.isDarkMode,
+                    fontScale = uiState.fontScale // Aplicamos la escala globalmente
+                ) {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         TextifyNavigation(profileViewModel)
                     }
@@ -104,8 +107,6 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
             }
         }
     ) { paddingValues ->
-        // No aplicamos el padding aquí al NavHost para que el Drawer en ChatScreen 
-        // pueda ocupar toda la altura de la pantalla (cubrir la barra de navegación)
         NavHost(
             navController = navController,
             startDestination = Routes.SPLASH
@@ -132,7 +133,15 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
             }
             
             composable(route = Routes.REGISTER) {
-                RegisterScreen(onNavigateToLogin = { navController.popBackStack() })
+                RegisterScreen(
+                    onRegister = { gender ->
+                        profileViewModel.setVoiceGender(gender)
+                        navController.navigate(Routes.CHAT) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    },
+                    onNavigateToLogin = { navController.popBackStack() }
+                )
             }
             
             composable(route = Routes.CHAT) {
@@ -147,7 +156,6 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
                         deleteConversationUseCase
                     )
                 )
-                // Pasamos los paddingValues para que el contenido respete la barra inferior
                 ChatScreen(
                     navController = navController, 
                     viewModel = chatViewModel,

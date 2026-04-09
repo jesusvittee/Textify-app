@@ -23,6 +23,7 @@ data class ProfileUiState(
     val isDarkMode: Boolean = false,
     val highContrast: Boolean = true,
     val fontSize: FontSize = FontSize.MEDIUM,
+    val fontScale: Float = 1.0f,
     val voiceGender: VoiceGender = VoiceGender.FEMALE,
     val selectedVoiceId: String = "sofia",
     val ttsSpeed: TtsSpeed = TtsSpeed.NORMAL,
@@ -59,7 +60,16 @@ class ProfileViewModel : ViewModel() {
     }
 
     fun setFontSize(size: FontSize) {
-        _uiState.value = _uiState.value.copy(fontSize = size)
+        val scale = when(size) {
+            FontSize.SMALL -> 0.85f
+            FontSize.MEDIUM -> 1.0f
+            FontSize.LARGE -> 1.3f
+        }
+        _uiState.value = _uiState.value.copy(fontSize = size, fontScale = scale)
+    }
+    
+    fun setFontScale(scale: Float) {
+        _uiState.value = _uiState.value.copy(fontScale = scale)
     }
 
     fun setVoiceGender(gender: VoiceGender) {
