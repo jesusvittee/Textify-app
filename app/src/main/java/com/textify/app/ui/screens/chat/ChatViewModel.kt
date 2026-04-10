@@ -1,12 +1,18 @@
 package com.textify.app.ui.screens.chat
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.textify.app.ai.stt.SpeechRecognizer
 import com.textify.app.data.local.entity.ConversationEntity
 import com.textify.app.domain.model.Message
+import com.textify.app.domain.model.MessageType
+import com.textify.app.domain.model.Gender
 import com.textify.app.domain.usecase.*
+import com.textify.app.services.audio.TextToSpeechManager
+import com.textify.app.ui.screens.profile.VoiceGender
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -23,10 +29,12 @@ data class ChatUiState(
     val isOnline: Boolean = false,
     val error: String? = null,
     val transcribedText: String = "",
-    val recordingDuration: String = "0:00"
+    val selectedVoiceId: String = "default_offline",
+    val voiceGender: VoiceGender = VoiceGender.MALE
 )
 
 class ChatViewModel(
+    application: Application,
     private val getMessagesUseCase: GetMessagesUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val speechRecognizer: SpeechRecognizer,
@@ -34,25 +42,29 @@ class ChatViewModel(
     private val createConversationUseCase: CreateConversationUseCase,
     private val updateConversationUseCase: UpdateConversationUseCase,
     private val deleteConversationUseCase: DeleteConversationUseCase
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState
 
+    private val ttsManager = TextToSpeechManager(application)
+
     init {
         loadConversations()
-        _uiState.value = _uiState.value.copy(isOnline = false)
+    }
+
+    fun updateVoiceSettings(voiceId: String, gender: VoiceGender) {
+        _uiState.value = _uiState.value.copy(
+            selectedVoiceId = voiceId,
+            voiceGender = gender
+        )
     }
 
     private fun loadConversations() {
         viewModelScope.launch {
             getConversationsUseCase().collectLatest { list ->
-                // Solo mostramos conversaciones que tengan al menos un mensaje
                 val filteredList = list.filter { it.lastMessage.isNotEmpty() }
                 _uiState.value = _uiState.value.copy(conversations = filteredList)
-                
-                // Al iniciar la app (cuando currentConversation es null), 
-                // siempre empezamos con una nueva conversación vacía por defecto
                 if (_uiState.value.currentConversation == null) {
                     createNewConversation("Textify")
                 }
@@ -60,9 +72,48 @@ class ChatViewModel(
         }
     }
 
-    fun selectConversation(conversation: ConversationEntity) {
-        _uiState.value = _uiState.value.copy(currentConversation = conversation)
-        loadMessages(conversation.id)
+    fun playMessage(text: String) {
+        ttsManager.speak(text, _uiState.value.selectedVoiceId, _uiState.value.voiceGender)
+    }
+
+    fun sendMessage(text: String, type: MessageType = MessageType.TEXT, isOwn: Boolean = true) {
+        if (text.isBlank()) return
+        val currentConversation = _uiState.value.currentConversation ?: return
+        val currentId = currentConversation.id
+
+        val message = Message(
+            id = UUID.randomUUID().toString(),
+            conversationId = currentId,
+            text = text,
+            isOwn = isOwn,
+            type = type,
+            timestamp = System.currentTimeMillis()
+        )
+
+        viewModelScope.launch {
+            try {
+                if (_uiState.value.messages.isEmpty()) {
+                    val updatedName = if (currentConversation.participantName == "Textify") text.take(30) else currentConversation.participantName
+                    val convToSave = currentConversation.copy(
+                        participantName = updatedName,
+                        lastMessage = text,
+                        lastMessageTime = System.currentTimeMillis()
+                    )
+                    createConversationUseCase(convToSave)
+                    _uiState.value = _uiState.value.copy(currentConversation = convToSave)
+                }
+                sendMessageUseCase(message)
+                updateConversationUseCase(ConversationEntity(
+                    id = currentId,
+                    participantName = _uiState.value.currentConversation?.participantName ?: "Textify",
+                    lastMessage = text,
+                    lastMessageTime = System.currentTimeMillis()
+                ))
+                loadMessages(currentId)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
     }
 
     private fun loadMessages(conversationId: String) {
@@ -77,6 +128,27 @@ class ChatViewModel(
         }
     }
 
+    fun selectConversation(id: String) {
+        val conversation = _uiState.value.conversations.find { it.id == id }
+        if (conversation != null) {
+            _uiState.value = _uiState.value.copy(currentConversation = conversation)
+            loadMessages(id)
+        }
+    }
+
+    fun createConversation(title: String) {
+        viewModelScope.launch {
+            val newConv = ConversationEntity(
+                id = UUID.randomUUID().toString(),
+                participantName = title,
+                lastMessage = "",
+                lastMessageTime = System.currentTimeMillis()
+            )
+            createConversationUseCase(newConv)
+            _uiState.value = _uiState.value.copy(currentConversation = newConv, messages = emptyList())
+        }
+    }
+    
     fun createNewConversation(title: String) {
         viewModelScope.launch {
             val newConv = ConversationEntity(
@@ -85,21 +157,17 @@ class ChatViewModel(
                 lastMessage = "",
                 lastMessageTime = System.currentTimeMillis()
             )
-            // No la guardamos en BD todavía para que no aparezca en la lista si está vacía
             _uiState.value = _uiState.value.copy(currentConversation = newConv, messages = emptyList())
         }
     }
 
     fun deleteConversation(id: String) {
-        viewModelScope.launch {
-            deleteConversationUseCase(id)
-        }
+        viewModelScope.launch { deleteConversationUseCase(id) }
     }
 
     fun renameConversation(id: String, newName: String) {
         viewModelScope.launch {
-            val conv = _uiState.value.conversations.find { it.id == id }
-            conv?.let {
+            _uiState.value.conversations.find { it.id == id }?.let {
                 updateConversationUseCase(it.copy(participantName = newName))
             }
         }
@@ -107,89 +175,42 @@ class ChatViewModel(
 
     fun togglePinConversation(id: String) {
         viewModelScope.launch {
-            val conv = _uiState.value.conversations.find { it.id == id }
-            conv?.let {
+            _uiState.value.conversations.find { it.id == id }?.let {
                 updateConversationUseCase(it.copy(isPinned = !it.isPinned))
             }
         }
     }
 
-    fun sendMessage(text: String) {
-        if (text.isBlank()) return
-        val currentConversation = _uiState.value.currentConversation ?: return
-        val currentId = currentConversation.id
-
-        val message = Message(
-            id = UUID.randomUUID().toString(),
-            conversationId = currentId,
-            text = text,
-            isOwn = true,
-            timestamp = System.currentTimeMillis()
-        )
-
-        viewModelScope.launch {
-            try {
-                // Si es el primer mensaje, primero creamos la conversación en la BD
-                if (_uiState.value.messages.isEmpty()) {
-                    val updatedName = if (currentConversation.participantName == "Textify") {
-                        text.take(30)
-                    } else {
-                        currentConversation.participantName
-                    }
-                    val convToSave = currentConversation.copy(
-                        participantName = updatedName,
-                        lastMessage = text,
-                        lastMessageTime = System.currentTimeMillis()
-                    )
-                    createConversationUseCase(convToSave)
-                    _uiState.value = _uiState.value.copy(currentConversation = convToSave)
-                }
-
-                sendMessageUseCase(message)
-                updateConversationData(currentId, text, _uiState.value.currentConversation?.participantName ?: "Textify")
-                loadMessages(currentId)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
-            }
-        }
-    }
-
-    private suspend fun updateConversationData(id: String, lastMsg: String, name: String) {
-        updateConversationUseCase(ConversationEntity(
-            id = id,
-            participantName = name,
-            lastMessage = lastMsg,
-            lastMessageTime = System.currentTimeMillis()
-        ))
-    }
-
-    fun toggleListening() {
-        if (_uiState.value.isListening) {
-            stopListening()
-        } else {
-            startListening()
-        }
-    }
-
-    private fun startListening() {
-        _uiState.value = _uiState.value.copy(isListening = true, isRecording = true, error = null)
+    fun startListening() {
+        _uiState.value = _uiState.value.copy(isListening = true, isRecording = false, transcribedText = "", error = null)
         speechRecognizer.startListening(
-            onResult = { result ->
-                _uiState.value = _uiState.value.copy(isListening = false, isRecording = false, transcribedText = result)
-                sendMessage(result)
-            },
-            onError = { errorMsg ->
-                _uiState.value = _uiState.value.copy(isListening = false, isRecording = false, error = errorMsg)
-            }
+            onReady = { _uiState.value = _uiState.value.copy(isRecording = true) },
+            onResult = { result -> _uiState.value = _uiState.value.copy(transcribedText = result) },
+            onError = { errorMsg -> _uiState.value = _uiState.value.copy(isListening = false, isRecording = false, error = errorMsg) }
         )
     }
 
-    private fun stopListening() {
+    fun stopAndSend() {
         speechRecognizer.stopListening()
-        _uiState.value = _uiState.value.copy(isListening = false, isRecording = false)
+        val textToSend = _uiState.value.transcribedText
+        if (textToSend.isNotBlank()) {
+            sendMessage(textToSend, type = MessageType.AUDIO, isOwn = false)
+        }
+        _uiState.value = _uiState.value.copy(isListening = false, isRecording = false, transcribedText = "")
+    }
+
+    fun cancelListening() {
+        speechRecognizer.stopListening()
+        _uiState.value = _uiState.value.copy(isListening = false, isRecording = false, transcribedText = "")
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ttsManager.shutdown()
     }
 
     class Factory(
+        private val application: Application,
         private val getMessagesUseCase: GetMessagesUseCase,
         private val sendMessageUseCase: SendMessageUseCase,
         private val speechRecognizer: SpeechRecognizer,
@@ -199,15 +220,7 @@ class ChatViewModel(
         private val deleteConversationUseCase: DeleteConversationUseCase
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return ChatViewModel(
-                getMessagesUseCase,
-                sendMessageUseCase,
-                speechRecognizer,
-                getConversationsUseCase,
-                createConversationUseCase,
-                updateConversationUseCase,
-                deleteConversationUseCase
-            ) as T
+            return ChatViewModel(application, getMessagesUseCase, sendMessageUseCase, speechRecognizer, getConversationsUseCase, createConversationUseCase, updateConversationUseCase, deleteConversationUseCase) as T
         }
     }
 }

@@ -8,6 +8,7 @@ import com.textify.app.domain.usecase.AddPhraseUseCase
 import com.textify.app.domain.usecase.DeletePhraseUseCase
 import com.textify.app.domain.usecase.GetPhrasesUseCase
 import com.textify.app.domain.usecase.PlayPhraseUseCase
+import com.textify.app.ui.screens.profile.VoiceGender
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -15,11 +16,16 @@ import java.util.UUID
 
 data class PhrasesUiState(
     val phrases: List<Phrase> = emptyList(),
+    val selectedPhraseIds: Set<String> = emptySet(),
     val isPlaying: Boolean = false,
     val playingPhraseId: String? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
-)
+    val error: String? = null,
+    val selectedVoiceId: String = "default_offline",
+    val voiceGender: VoiceGender = VoiceGender.MALE
+) {
+    val isSelectionMode: Boolean get() = selectedPhraseIds.isNotEmpty()
+}
 
 class PhrasesViewModel(
     private val getPhrasesUseCase: GetPhrasesUseCase,
@@ -33,6 +39,13 @@ class PhrasesViewModel(
 
     init {
         loadPhrases()
+    }
+
+    fun updateVoiceSettings(voiceId: String, gender: VoiceGender) {
+        _uiState.value = _uiState.value.copy(
+            selectedVoiceId = voiceId,
+            voiceGender = gender
+        )
     }
 
     private fun loadPhrases() {
@@ -68,16 +81,47 @@ class PhrasesViewModel(
             try {
                 deletePhraseUseCase(phraseId)
                 loadPhrases()
+                _uiState.value = _uiState.value.copy(
+                    selectedPhraseIds = _uiState.value.selectedPhraseIds - phraseId
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
 
+    fun deleteSelectedPhrases() {
+        viewModelScope.launch {
+            try {
+                _uiState.value.selectedPhraseIds.forEach { id ->
+                    deletePhraseUseCase(id)
+                }
+                _uiState.value = _uiState.value.copy(selectedPhraseIds = emptySet())
+                loadPhrases()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun toggleSelection(phraseId: String) {
+        val currentSelected = _uiState.value.selectedPhraseIds
+        val newSelected = if (currentSelected.contains(phraseId)) {
+            currentSelected - phraseId
+        } else {
+            currentSelected + phraseId
+        }
+        _uiState.value = _uiState.value.copy(selectedPhraseIds = newSelected)
+    }
+
+    fun clearSelection() {
+        _uiState.value = _uiState.value.copy(selectedPhraseIds = emptySet())
+    }
+
     fun setPlaying(phraseId: String?) {
         val phrase = _uiState.value.phrases.find { it.id == phraseId }
         phrase?.let {
-            playPhraseUseCase(it)
+            playPhraseUseCase(it, _uiState.value.selectedVoiceId, _uiState.value.voiceGender)
             _uiState.value = _uiState.value.copy(
                 isPlaying = true,
                 playingPhraseId = phraseId

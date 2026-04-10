@@ -5,17 +5,15 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -23,7 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.textify.app.ai.stt.SpeechRecognizer
-import com.textify.app.ai.tts.TextToSpeechManager
+import com.textify.app.services.audio.TextToSpeechManager
 import com.textify.app.data.repository.ConversationRepositoryImpl
 import com.textify.app.data.repository.MessageRepositoryImpl
 import com.textify.app.data.repository.PhraseRepositoryImpl
@@ -52,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 
                 TextifyTheme(
                     darkTheme = uiState.isDarkMode,
-                    fontScale = uiState.fontScale // Aplicamos la escala globalmente
+                    fontScale = uiState.fontScale
                 ) {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         TextifyNavigation(profileViewModel)
@@ -91,11 +89,37 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
     val addPhraseUseCase = remember { AddPhraseUseCase(phraseRepository) }
     val deletePhraseUseCase = remember { DeletePhraseUseCase(phraseRepository) }
     val playPhraseUseCase = remember { PlayPhraseUseCase(ttsManager) }
-    
     val getConversationsUseCase = remember { GetConversationsUseCase(conversationRepository) }
     val createConversationUseCase = remember { CreateConversationUseCase(conversationRepository) }
     val updateConversationUseCase = remember { UpdateConversationUseCase(conversationRepository) }
     val deleteConversationUseCase = remember { DeleteConversationUseCase(conversationRepository) }
+
+    // ViewModels compartidos (Scanned to Activity) para mantener el estado entre pestañas
+    val activity = LocalContext.current as ComponentActivity
+    
+    val chatViewModel: ChatViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = ChatViewModel.Factory(
+            app,
+            getMessagesUseCase, sendMessageUseCase, speechRecognizer,
+            getConversationsUseCase, createConversationUseCase,
+            updateConversationUseCase, deleteConversationUseCase
+        )
+    )
+    
+    val phrasesViewModel: PhrasesViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = PhrasesViewModel.Factory(
+            getPhrasesUseCase, addPhraseUseCase, deletePhraseUseCase, playPhraseUseCase
+        )
+    )
+
+    // Sincronizar configuraciones de voz
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(profileUiState.selectedVoiceId, profileUiState.voiceGender) {
+        chatViewModel.updateVoiceSettings(profileUiState.selectedVoiceId, profileUiState.voiceGender)
+        phrasesViewModel.updateVoiceSettings(profileUiState.selectedVoiceId, profileUiState.voiceGender)
+    }
 
     val routesWithNavbar = listOf(Routes.CHAT, Routes.PHRASES, Routes.PROFILE)
     val showNavbar = currentRoute in routesWithNavbar
@@ -145,33 +169,15 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
             }
             
             composable(route = Routes.CHAT) {
-                val chatViewModel: ChatViewModel = viewModel(
-                    factory = ChatViewModel.Factory(
-                        getMessagesUseCase, 
-                        sendMessageUseCase, 
-                        speechRecognizer,
-                        getConversationsUseCase,
-                        createConversationUseCase,
-                        updateConversationUseCase,
-                        deleteConversationUseCase
-                    )
-                )
                 ChatScreen(
                     navController = navController, 
                     viewModel = chatViewModel,
+                    profileViewModel = profileViewModel,
                     contentPadding = paddingValues
                 )
             }
             
             composable(route = Routes.PHRASES) {
-                val phrasesViewModel: PhrasesViewModel = viewModel(
-                    factory = PhrasesViewModel.Factory(
-                        getPhrasesUseCase,
-                        addPhraseUseCase,
-                        deletePhraseUseCase,
-                        playPhraseUseCase
-                    )
-                )
                 PhrasesScreen(
                     navController = navController, 
                     viewModel = phrasesViewModel,

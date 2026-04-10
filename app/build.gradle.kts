@@ -17,6 +17,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     buildTypes {
@@ -38,6 +42,11 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
@@ -50,25 +59,20 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     
-    // Material Components (XML)
     implementation(libs.material)
-    
-    // Retrofit
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
-    
-    // Navegación
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.material.icons)
-
-    // Lifecycle y ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-
-    // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // Vosk para reconocimiento Offline
+    // La versión 0.3.75 ya gestiona correctamente sus dependencias nativas
+    implementation("com.alphacephei:vosk-android:0.3.75")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

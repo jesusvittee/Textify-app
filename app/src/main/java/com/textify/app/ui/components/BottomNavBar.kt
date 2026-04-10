@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
@@ -25,8 +26,14 @@ fun BottomNavBar(navController: NavController) {
         NavigationBarItem(
             selected = currentRoute == Routes.CHAT,
             onClick = { 
-                navController.navigate(Routes.CHAT) {
-                    popUpTo(Routes.CHAT) { inclusive = true }
+                if (currentRoute != Routes.CHAT) {
+                    navController.navigate(Routes.CHAT) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             },
             icon = { Icon(Icons.Filled.Chat, contentDescription = "Conversar") },
@@ -42,8 +49,14 @@ fun BottomNavBar(navController: NavController) {
         NavigationBarItem(
             selected = currentRoute == Routes.PHRASES,
             onClick = { 
-                navController.navigate(Routes.PHRASES) {
-                    popUpTo(Routes.PHRASES) { inclusive = true }
+                if (currentRoute != Routes.PHRASES) {
+                    navController.navigate(Routes.PHRASES) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             },
             icon = { Icon(Icons.Filled.Star, contentDescription = "Frases") },
@@ -59,8 +72,14 @@ fun BottomNavBar(navController: NavController) {
         NavigationBarItem(
             selected = currentRoute == Routes.PROFILE,
             onClick = { 
-                navController.navigate(Routes.PROFILE) {
-                    popUpTo(Routes.PROFILE) { inclusive = true }
+                if (currentRoute != Routes.PROFILE) {
+                    navController.navigate(Routes.PROFILE) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             },
             icon = { Icon(Icons.Filled.Person, contentDescription = "Perfil") },

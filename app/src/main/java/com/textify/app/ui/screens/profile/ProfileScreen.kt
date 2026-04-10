@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,7 +38,7 @@ fun ProfileScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = FondoClaro,
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         LazyColumn(
@@ -57,7 +56,7 @@ fun ProfileScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, AzulClaro.copy(alpha = 0.2f))
                 ) {
                     Row(
@@ -84,7 +83,7 @@ fun ProfileScreen(
                                 text = uiState.name,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextoPrimario
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = uiState.email,
@@ -92,6 +91,51 @@ fun ProfileScreen(
                                 color = AzulMedio,
                                 fontWeight = FontWeight.Medium
                             )
+                        }
+                    }
+                }
+            }
+
+            // MODALIDAD OFFLINE (Nuevo apartado solicitado)
+            item {
+                SectionCard("MODO OFFLINE") {
+                    Text(
+                        "Usa la app sin conexión descargando el paquete de voz en español.",
+                        fontSize = 13.sp,
+                        color = TextoMuted,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    if (uiState.isOfflinePackageInstalled) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.CheckCircle, null, tint = Verde, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Paquete instalado", color = Verde, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.downloadOfflinePackage() },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !uiState.isDownloading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AzulMedio,
+                                disabledContainerColor = FondoGris
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (uiState.isDownloading) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                                Spacer(Modifier.width(12.dp))
+                                Text(uiState.downloadProgress, color = Color.White)
+                            } else {
+                                Icon(Icons.Default.Download, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Descargar paquete (40MB)")
+                            }
                         }
                     }
                 }
@@ -106,44 +150,45 @@ fun ProfileScreen(
                         onCheckedChange = { viewModel.toggleDarkMode(it) }
                     )
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     
                     Text(
                         "Tamaño de fuente", 
-                        color = TextoPrimario, 
+                        color = MaterialTheme.colorScheme.onSurface, 
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        fontWeight = FontWeight.Medium
                     )
                     
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .background(Color(0xFFF0F2F5), RoundedCornerShape(12.dp))
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FontSizeOption(
-                            text = "A",
-                            size = 12.sp,
-                            selected = uiState.fontSize == FontSize.SMALL,
-                            onClick = { viewModel.setFontSize(FontSize.SMALL) }
+                        Text("A", fontSize = 12.sp, color = TextoMuted, fontWeight = FontWeight.Bold)
+                        Slider(
+                            value = uiState.fontScale,
+                            onValueChange = { viewModel.setFontScale(it) },
+                            valueRange = 0.8f..1.5f,
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = AzulMedio,
+                                activeTrackColor = AzulMedio,
+                                inactiveTrackColor = FondoGris
+                            )
                         )
-                        FontSizeOption(
-                            text = "A",
-                            size = 16.sp,
-                            selected = uiState.fontSize == FontSize.MEDIUM,
-                            onClick = { viewModel.setFontSize(FontSize.MEDIUM) }
-                        )
-                        FontSizeOption(
-                            text = "A",
-                            size = 20.sp,
-                            selected = uiState.fontSize == FontSize.LARGE,
-                            onClick = { viewModel.setFontSize(FontSize.LARGE) }
-                        )
+                        Text("A", fontSize = 22.sp, color = TextoMuted, fontWeight = FontWeight.Bold)
                     }
+                    
+                    Text(
+                        text = when {
+                            uiState.fontScale < 0.95f -> "Pequeño"
+                            uiState.fontScale < 1.1f -> "Normal"
+                            else -> "Grande"
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp,
+                        color = AzulMedio
+                    )
                 }
             }
 
@@ -153,18 +198,18 @@ fun ProfileScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFF0F2F5), RoundedCornerShape(12.dp))
+                            .background(if(uiState.isDarkMode) SuperficieOscura2 else Color(0xFFF0F2F5), RoundedCornerShape(12.dp))
                             .padding(4.dp)
                     ) {
                         GenderButton(
-                            text = "Femenina",
+                            text = "Femenino",
                             icon = Icons.Default.Female,
                             selected = uiState.voiceGender == VoiceGender.FEMALE,
                             modifier = Modifier.weight(1f),
                             onClick = { viewModel.setVoiceGender(VoiceGender.FEMALE) }
                         )
                         GenderButton(
-                            text = "Masculina",
+                            text = "Masculino",
                             icon = Icons.Default.Male,
                             selected = uiState.voiceGender == VoiceGender.MALE,
                             modifier = Modifier.weight(1f),
@@ -278,28 +323,6 @@ fun ProfileScreen(
 }
 
 @Composable
-fun FontSizeOption(text: String, size: androidx.compose.ui.unit.TextUnit, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .width(80.dp)
-            .fillMaxHeight()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        color = if (selected) Color.White else Color.Transparent,
-        shadowElevation = if (selected) 2.dp else 0.dp
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                fontSize = size,
-                fontWeight = FontWeight.Bold,
-                color = if (selected) AzulMedio else TextoMuted
-            )
-        }
-    }
-}
-
-@Composable
 fun CustomAlertDialog(
     title: String,
     message: String,
@@ -313,7 +336,7 @@ fun CustomAlertDialog(
         Card(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -328,7 +351,7 @@ fun CustomAlertDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = title,
-                    color = TextoPrimario,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -384,7 +407,7 @@ fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, AzulClaro.copy(alpha = 0.1f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -401,7 +424,7 @@ fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = TextoPrimario, fontSize = 14.sp)
+        Text(label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -422,17 +445,17 @@ fun SettingsSegmentedRow(label: String, options: List<String>, selectedIndex: In
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = TextoPrimario, fontSize = 14.sp)
+        Text(label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
         Row(
             modifier = Modifier
-                .background(Color(0xFFF0F2F5), RoundedCornerShape(12.dp))
+                .background(if(MaterialTheme.colorScheme.primary == AzulOscuro) Color(0xFFF0F2F5) else SuperficieOscura2, RoundedCornerShape(12.dp))
                 .padding(4.dp)
         ) {
             options.forEachIndexed { index, text ->
                 Surface(
                     modifier = Modifier.clickable { onSelect(index) },
                     shape = RoundedCornerShape(8.dp),
-                    color = if (selectedIndex == index) Color.White else Color.Transparent,
+                    color = if (selectedIndex == index) (if(MaterialTheme.colorScheme.primary == AzulOscuro) Color.White else AzulMedio) else Color.Transparent,
                     shadowElevation = if (selectedIndex == index) 2.dp else 0.dp
                 ) {
                     Text(
@@ -440,7 +463,7 @@ fun SettingsSegmentedRow(label: String, options: List<String>, selectedIndex: In
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (selectedIndex == index) AzulMedio else TextoMuted
+                        color = if (selectedIndex == index) (if(MaterialTheme.colorScheme.primary == AzulOscuro) AzulMedio else Color.White) else TextoMuted
                     )
                 }
             }
@@ -453,7 +476,7 @@ fun GenderButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
     Surface(
         modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(8.dp),
-        color = if (selected) Color.White else Color.Transparent,
+        color = if (selected) (if(MaterialTheme.colorScheme.primary == AzulOscuro) Color.White else AzulMedio) else Color.Transparent,
         shadowElevation = if (selected) 2.dp else 0.dp
     ) {
         Row(
@@ -461,9 +484,9 @@ fun GenderButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selected) AzulMedio else TextoMuted)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selected) (if(MaterialTheme.colorScheme.primary == AzulOscuro) AzulMedio else Color.White) else TextoMuted)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (selected) AzulOscuro else TextoMuted)
+            Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (selected) (if(MaterialTheme.colorScheme.primary == AzulOscuro) AzulOscuro else Color.White) else TextoMuted)
         }
     }
 }
@@ -475,7 +498,7 @@ fun VoiceItem(voice: VoiceOption, selected: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
             color = if (selected) Verde else AzulClaro.copy(alpha = 0.1f)
@@ -496,7 +519,7 @@ fun VoiceItem(voice: VoiceOption, selected: Boolean, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(voice.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextoPrimario)
+                Text(voice.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                 Text(voice.description, fontSize = 12.sp, color = TextoMuted)
             }
             Surface(
