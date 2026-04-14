@@ -5,15 +5,34 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -21,7 +40,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.textify.app.ai.stt.SpeechRecognizer
-import com.textify.app.services.audio.TextToSpeechManager
+import com.textify.app.ai.tts.TextToSpeechManager
+import com.textify.app.data.local.entity.UsuarioEntity
 import com.textify.app.data.repository.ConversationRepositoryImpl
 import com.textify.app.data.repository.MessageRepositoryImpl
 import com.textify.app.data.repository.PhraseRepositoryImpl
@@ -37,52 +57,59 @@ import com.textify.app.ui.screens.phrases.PhrasesScreen
 import com.textify.app.ui.screens.phrases.PhrasesViewModel
 import com.textify.app.ui.screens.profile.ProfileScreen
 import com.textify.app.ui.screens.profile.ProfileViewModel
+import com.textify.app.ui.screens.profile.VoiceGender
 import com.textify.app.ui.theme.TextifyTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        try {
-            setContent {
-                val profileViewModel: ProfileViewModel = viewModel()
-                val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
-                
-                TextifyTheme(
-                    darkTheme = uiState.isDarkMode,
-                    fontScale = uiState.fontScale
+        setContent {
+            val context = LocalContext.current
+            val app = context.applicationContext as TextifyApp
+            
+            val ttsManager = remember { TextToSpeechManager(context) }
+            
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = ProfileViewModel.Factory(app, ttsManager)
+            )
+            val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+            
+            TextifyTheme(
+                darkTheme = uiState.isDarkMode,
+                fontScale = uiState.fontScale
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
                 ) {
-                    Surface(modifier = Modifier.fillMaxSize()) {
-                        TextifyNavigation(profileViewModel)
-                    }
+                    TextifyNavigation(profileViewModel, ttsManager)
                 }
             }
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error al iniciar Compose: ${e.message}")
         }
     }
 }
 
 @Composable
-fun TextifyNavigation(profileViewModel: ProfileViewModel) {
+fun TextifyNavigation(profileViewModel: ProfileViewModel, ttsManager: TextToSpeechManager) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val lifecycleState by navBackStackEntry?.lifecycle?.currentStateFlow?.collectAsStateWithLifecycle(Lifecycle.State.INITIALIZED)
+        ?: remember { mutableStateOf(Lifecycle.State.INITIALIZED) }
+
     val context = LocalContext.current
     val app = context.applicationContext as TextifyApp
     val database = app.database
+    val scope = rememberCoroutineScope()
     
-    // Repositorios
     val messageRepository = remember { MessageRepositoryImpl(database.messageDao()) }
     val phraseRepository = remember { PhraseRepositoryImpl(database.phraseDao()) }
     val conversationRepository = remember { ConversationRepositoryImpl(database.conversationDao()) }
-    
-    // IA Managers
-    val ttsManager = remember { TextToSpeechManager(context) }
     val speechRecognizer = remember { SpeechRecognizer(context) }
 
-    // Casos de Uso
     val getMessagesUseCase = remember { GetMessagesUseCase(messageRepository) }
     val sendMessageUseCase = remember { SendMessageUseCase(messageRepository) }
     val getPhrasesUseCase = remember { GetPhrasesUseCase(phraseRepository) }
@@ -94,14 +121,12 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
     val updateConversationUseCase = remember { UpdateConversationUseCase(conversationRepository) }
     val deleteConversationUseCase = remember { DeleteConversationUseCase(conversationRepository) }
 
-    // ViewModels compartidos (Scanned to Activity) para mantener el estado entre pestañas
     val activity = LocalContext.current as ComponentActivity
     
     val chatViewModel: ChatViewModel = viewModel(
         viewModelStoreOwner = activity,
         factory = ChatViewModel.Factory(
-            app,
-            getMessagesUseCase, sendMessageUseCase, speechRecognizer,
+            app, getMessagesUseCase, sendMessageUseCase, speechRecognizer, ttsManager,
             getConversationsUseCase, createConversationUseCase,
             updateConversationUseCase, deleteConversationUseCase
         )
@@ -110,30 +135,50 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
     val phrasesViewModel: PhrasesViewModel = viewModel(
         viewModelStoreOwner = activity,
         factory = PhrasesViewModel.Factory(
-            getPhrasesUseCase, addPhraseUseCase, deletePhraseUseCase, playPhraseUseCase
+            app, getPhrasesUseCase, addPhraseUseCase, deletePhraseUseCase, playPhraseUseCase
         )
     )
 
-    // Sincronizar configuraciones de voz
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(profileUiState.selectedVoiceId, profileUiState.voiceGender) {
         chatViewModel.updateVoiceSettings(profileUiState.selectedVoiceId, profileUiState.voiceGender)
         phrasesViewModel.updateVoiceSettings(profileUiState.selectedVoiceId, profileUiState.voiceGender)
     }
 
-    val routesWithNavbar = listOf(Routes.CHAT, Routes.PHRASES, Routes.PROFILE)
-    val showNavbar = currentRoute in routesWithNavbar
+    val routesWithNavbar = remember { listOf(Routes.CHAT, Routes.PHRASES, Routes.PROFILE) }
+    
+    val showNavbar by remember(currentRoute, lifecycleState) {
+        derivedStateOf {
+            val isMainRoute = currentRoute in routesWithNavbar
+            val isResumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+            val fromMainRoute = navController.previousBackStackEntry?.destination?.route in routesWithNavbar
+            
+            isMainRoute && (isResumed || fromMainRoute)
+        }
+    }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (showNavbar) {
+            AnimatedVisibility(
+                visible = showNavbar,
+                enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut()
+            ) {
                 BottomNavBar(navController = navController)
             }
         }
     ) { paddingValues ->
+        val bottomPadding = if (showNavbar) paddingValues.calculateBottomPadding() else 0.dp
+
         NavHost(
             navController = navController,
-            startDestination = Routes.SPLASH
+            startDestination = Routes.SPLASH,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = bottomPadding)
         ) {
             composable(route = Routes.SPLASH) {
                 SplashScreen(onNavigateToLogin = {
@@ -146,8 +191,22 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
             composable(route = Routes.LOGIN) {
                 LoginScreen(
                     onNavigateToHome = {
-                        navController.navigate(Routes.CHAT) {
-                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        scope.launch {
+                            // Aseguramos que exista al menos un usuario para evitar Foreign Key error
+                            val existingUser = database.usuarioDao().getUsuarioByCorreo("nicolas@example.com")
+                            if (existingUser == null) {
+                                database.usuarioDao().insertUsuario(
+                                    UsuarioEntity(
+                                        id = "default_user",
+                                        nombre = "Nicolás Vite",
+                                        correo = "nicolas@example.com",
+                                        contrasena = "123456"
+                                    )
+                                )
+                            }
+                            navController.navigate(Routes.CHAT) {
+                                popUpTo(Routes.LOGIN) { inclusive = true }
+                            }
                         }
                     },
                     onNavigateToRegister = {
@@ -159,9 +218,19 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
             composable(route = Routes.REGISTER) {
                 RegisterScreen(
                     onRegister = { gender ->
-                        profileViewModel.setVoiceGender(gender)
-                        navController.navigate(Routes.CHAT) {
-                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        scope.launch {
+                            database.usuarioDao().insertUsuario(
+                                UsuarioEntity(
+                                    id = "default_user",
+                                    nombre = "Usuario Nuevo",
+                                    correo = "nuevo@example.com",
+                                    contrasena = "123456"
+                                )
+                            )
+                            profileViewModel.setVoiceGender(gender)
+                            navController.navigate(Routes.CHAT) {
+                                popUpTo(Routes.REGISTER) { inclusive = true }
+                            }
                         }
                     },
                     onNavigateToLogin = { navController.popBackStack() }
@@ -169,28 +238,15 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel) {
             }
             
             composable(route = Routes.CHAT) {
-                ChatScreen(
-                    navController = navController, 
-                    viewModel = chatViewModel,
-                    profileViewModel = profileViewModel,
-                    contentPadding = paddingValues
-                )
+                ChatScreen(navController = navController, viewModel = chatViewModel, profileViewModel = profileViewModel)
             }
             
             composable(route = Routes.PHRASES) {
-                PhrasesScreen(
-                    navController = navController, 
-                    viewModel = phrasesViewModel,
-                    contentPadding = paddingValues
-                )
+                PhrasesScreen(navController = navController, viewModel = phrasesViewModel)
             }
             
             composable(route = Routes.PROFILE) {
-                ProfileScreen(
-                    navController = navController, 
-                    viewModel = profileViewModel,
-                    contentPadding = paddingValues
-                )
+                ProfileScreen(navController = navController, viewModel = profileViewModel)
             }
         }
     }

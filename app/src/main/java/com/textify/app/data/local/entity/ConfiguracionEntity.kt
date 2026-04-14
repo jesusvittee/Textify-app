@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 import java.util.UUID
 
 @Entity(
-    tableName = "phrases",
+    tableName = "configuraciones_accesibilidad",
     foreignKeys = [
         ForeignKey(
             entity = UsuarioEntity::class,
@@ -16,13 +16,19 @@ import java.util.UUID
         )
     ]
 )
-data class PhraseEntity(
+data class ConfiguracionEntity(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
     val usuarioId: String,
-    val text: String,
-    val categoria: String? = null,
-    val isPinned: Boolean = false,
+    val tamanoLetra: String = "Mediana",
+    val fontScale: Float = 1.0f,
+    val idiomaPreferido: String = "Español",
+    val velocidadVoz: Float = 1.0f,
+    val temaVisual: String = "Claro",
+    val isDarkMode: Boolean = false,
+    val voiceGender: String = "MALE",
+    val selectedVoiceId: String = "default_offline",
+    val localHistoryEnabled: Boolean = true,
     val updatedAt: Long = System.currentTimeMillis(),
     val isSynced: Boolean = false
 )

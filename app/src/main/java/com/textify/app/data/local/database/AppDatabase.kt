@@ -2,20 +2,27 @@ package com.textify.app.data.local.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.textify.app.data.local.dao.ConversationDao
-import com.textify.app.data.local.dao.MessageDao
-import com.textify.app.data.local.dao.PhraseDao
-import com.textify.app.data.local.entity.ConversationEntity
-import com.textify.app.data.local.entity.MessageEntity
-import com.textify.app.data.local.entity.PhraseEntity
+import com.textify.app.data.local.dao.*
+import com.textify.app.data.local.entity.*
 
 @Database(
-    entities = [MessageEntity::class, PhraseEntity::class, ConversationEntity::class],
-    version = 3,
+    entities = [
+        UsuarioEntity::class,
+        ConfiguracionEntity::class,
+        ContactoEmergenciaEntity::class,
+        PhraseEntity::class,
+        ConversationEntity::class,
+        MessageEntity::class,
+        SyncLogEntity::class
+    ],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun messageDao(): MessageDao
+    abstract fun usuarioDao(): UsuarioDao
+    abstract fun configuracionDao(): ConfiguracionDao
+    abstract fun contactoEmergenciaDao(): ContactoEmergenciaDao
     abstract fun phraseDao(): PhraseDao
     abstract fun conversationDao(): ConversationDao
+    abstract fun messageDao(): MessageDao
 }

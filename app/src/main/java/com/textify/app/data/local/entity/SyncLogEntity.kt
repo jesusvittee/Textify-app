@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 import java.util.UUID
 
 @Entity(
-    tableName = "phrases",
+    tableName = "sync_logs",
     foreignKeys = [
         ForeignKey(
             entity = UsuarioEntity::class,
@@ -16,13 +16,13 @@ import java.util.UUID
         )
     ]
 )
-data class PhraseEntity(
+data class SyncLogEntity(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
     val usuarioId: String,
-    val text: String,
-    val categoria: String? = null,
-    val isPinned: Boolean = false,
-    val updatedAt: Long = System.currentTimeMillis(),
-    val isSynced: Boolean = false
+    val tablaAfectada: String,
+    val idRegistroLocal: String,
+    val accion: String, // INSERT, UPDATE, DELETE
+    val estado: String = "Pendiente", // Pendiente, Sincronizado, Error
+    val fechaRegistro: Long = System.currentTimeMillis()
 )

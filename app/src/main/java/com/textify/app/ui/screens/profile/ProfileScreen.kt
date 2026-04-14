@@ -1,5 +1,6 @@
 package com.textify.app.ui.screens.profile
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.textify.app.ui.Routes
 import com.textify.app.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun ProfileScreen(
@@ -96,7 +99,88 @@ fun ProfileScreen(
                 }
             }
 
-            // MODALIDAD OFFLINE (Nuevo apartado solicitado)
+            // --- NUEVO APARTADO: CUENTA Y NUBE ---
+            item {
+                SectionCard("CUENTA Y NUBE") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Sincronización remota",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    uiState.syncStatus,
+                                    fontSize = 12.sp,
+                                    color = if(uiState.syncStatus.contains("Error")) Rojo else AzulMedio
+                                )
+                                if (uiState.lastSyncTime > 0) {
+                                    val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(uiState.lastSyncTime))
+                                    Text("Última vez: $date", fontSize = 11.sp, color = TextoMuted)
+                                }
+                            }
+                            
+                            if (uiState.isSyncing) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = AzulMedio)
+                            } else {
+                                Icon(
+                                    imageVector = if(uiState.lastSyncTime > 0) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                                    contentDescription = null,
+                                    tint = if(uiState.lastSyncTime > 0) Verde else TextoMuted
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // BOTÓN: SUBIR A LA NUBE (PUSH)
+                            Button(
+                                onClick = { viewModel.performSync(pushLocal = true) },
+                                modifier = Modifier.weight(1f),
+                                enabled = !uiState.isSyncing,
+                                colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Subir", fontSize = 13.sp)
+                            }
+
+                            // BOTÓN: DESCARGAR DE LA NUBE (PULL)
+                            Button(
+                                onClick = { viewModel.performSync(pushLocal = false) },
+                                modifier = Modifier.weight(1f),
+                                enabled = !uiState.isSyncing,
+                                colors = ButtonDefaults.buttonColors(containerColor = AzulMedio),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Bajar", fontSize = 13.sp)
+                            }
+                        }
+                        
+                        Text(
+                            "\"Bajar\" sobrescribirá tus cambios locales con lo que hay en la nube.",
+                            fontSize = 11.sp,
+                            color = TextoMuted,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            // MODALIDAD OFFLINE
             item {
                 SectionCard("MODO OFFLINE") {
                     Text(

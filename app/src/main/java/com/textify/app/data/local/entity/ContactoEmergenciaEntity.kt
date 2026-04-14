@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 import java.util.UUID
 
 @Entity(
-    tableName = "phrases",
+    tableName = "contactos_emergencia",
     foreignKeys = [
         ForeignKey(
             entity = UsuarioEntity::class,
@@ -16,13 +16,13 @@ import java.util.UUID
         )
     ]
 )
-data class PhraseEntity(
+data class ContactoEmergenciaEntity(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
     val usuarioId: String,
-    val text: String,
-    val categoria: String? = null,
-    val isPinned: Boolean = false,
+    val nombre: String,
+    val telefono: String,
+    val relacion: String?,
     val updatedAt: Long = System.currentTimeMillis(),
     val isSynced: Boolean = false
 )

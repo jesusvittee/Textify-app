@@ -14,6 +14,7 @@ class PhraseRepositoryImpl(
             Phrase(
                 id = entity.id,
                 text = entity.text,
+                usuarioId = entity.usuarioId,
                 isPinned = entity.isPinned
             )
         }
@@ -23,6 +24,7 @@ class PhraseRepositoryImpl(
         phraseDao.insertPhrase(
             PhraseEntity(
                 id = phrase.id,
+                usuarioId = phrase.usuarioId,
                 text = phrase.text,
                 isPinned = phrase.isPinned
             )
@@ -30,6 +32,6 @@ class PhraseRepositoryImpl(
     }
 
     override suspend fun deletePhrase(phraseId: String) {
-        phraseDao.deletePhrase(phraseId)
+        phraseDao.deletePhraseById(phraseId)
     }
 }

@@ -19,6 +19,6 @@ class ConversationRepositoryImpl(
     }
 
     override suspend fun deleteConversation(id: String) {
-        conversationDao.deleteById(id)
+        conversationDao.deleteConversation(id)
     }
 }

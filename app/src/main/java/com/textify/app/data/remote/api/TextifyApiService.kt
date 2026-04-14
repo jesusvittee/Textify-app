@@ -1,18 +1,42 @@
 package com.textify.app.data.remote.api
 
-import com.textify.app.data.remote.dto.MessageDto
-import com.textify.app.data.remote.dto.UserDto
+import com.textify.app.data.remote.dto.*
+import retrofit2.Response
 import retrofit2.http.*
 
 interface TextifyApiService {
-    @GET("messages/{conversationId}")
-    suspend fun getMessages(
-        @Path("conversationId") conversationId: String
-    ): List<MessageDto>
+    // Auth
+    @POST("api/auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
-    @POST("messages")
-    suspend fun sendMessage(@Body message: MessageDto): MessageDto
+    @POST("api/auth/register")
+    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
-    @GET("users/{userId}")
-    suspend fun getUser(@Path("userId") userId: String): UserDto
+    // Sync
+    @POST("api/sync/push")
+    suspend fun pushData(
+        @Header("Authorization") token: String,
+        @Body syncData: SyncPackage
+    ): Response<SyncResponse>
+
+    @GET("api/sync/pull")
+    suspend fun pullData(
+        @Header("Authorization") token: String,
+        @Query("lastSync") lastSync: Long
+    ): Response<SyncPackage>
 }
+
+data class LoginRequest(val correo: String, val contrasena: String)
+data class RegisterRequest(val nombre: String, val correo: String, val contrasena: String)
+data class AuthResponse(val token: String, val userId: String, val nombre: String)
+
+data class SyncPackage(
+    val usuarios: List<UsuarioDto> = emptyList(),
+    val configuraciones: List<ConfiguracionDto> = emptyList(),
+    val contactos: List<ContactoDto> = emptyList(),
+    val phrases: List<PhraseDto> = emptyList(),
+    val conversations: List<ConversationDto> = emptyList(),
+    val messages: List<SyncMessageDto> = emptyList()
+)
+
+data class SyncResponse(val success: Boolean, val timestamp: Long)

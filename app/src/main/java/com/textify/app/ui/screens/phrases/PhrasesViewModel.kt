@@ -9,12 +9,16 @@ import com.textify.app.domain.usecase.DeletePhraseUseCase
 import com.textify.app.domain.usecase.GetPhrasesUseCase
 import com.textify.app.domain.usecase.PlayPhraseUseCase
 import com.textify.app.ui.screens.profile.VoiceGender
+import com.textify.app.data.local.database.AppDatabase
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class PhrasesUiState(
+    val userId: String = "default_user",
     val phrases: List<Phrase> = emptyList(),
     val selectedPhraseIds: Set<String> = emptySet(),
     val isPlaying: Boolean = false,
@@ -28,17 +32,31 @@ data class PhrasesUiState(
 }
 
 class PhrasesViewModel(
+    application: Application,
     private val getPhrasesUseCase: GetPhrasesUseCase,
     private val addPhraseUseCase: AddPhraseUseCase,
     private val deletePhraseUseCase: DeletePhraseUseCase,
     private val playPhraseUseCase: PlayPhraseUseCase
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(PhrasesUiState())
     val uiState: StateFlow<PhrasesUiState> = _uiState
+    
+    private val db = (application as com.textify.app.TextifyApp).database
 
     init {
+        loadUserData()
         loadPhrases()
+    }
+
+    private fun loadUserData() {
+        viewModelScope.launch {
+            db.usuarioDao().getUsuario().collect { user ->
+                user?.let {
+                    _uiState.value = _uiState.value.copy(userId = it.id)
+                }
+            }
+        }
     }
 
     fun updateVoiceSettings(voiceId: String, gender: VoiceGender) {
@@ -66,7 +84,8 @@ class PhrasesViewModel(
             try {
                 val newPhrase = Phrase(
                     id = UUID.randomUUID().toString(),
-                    text = text
+                    text = text,
+                    usuarioId = _uiState.value.userId
                 )
                 addPhraseUseCase(newPhrase)
                 loadPhrases()
@@ -135,6 +154,7 @@ class PhrasesViewModel(
     }
 
     class Factory(
+        private val application: Application,
         private val getPhrasesUseCase: GetPhrasesUseCase,
         private val addPhraseUseCase: AddPhraseUseCase,
         private val deletePhraseUseCase: DeletePhraseUseCase,
@@ -142,6 +162,7 @@ class PhrasesViewModel(
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return PhrasesViewModel(
+                application,
                 getPhrasesUseCase,
                 addPhraseUseCase,
                 deletePhraseUseCase,
