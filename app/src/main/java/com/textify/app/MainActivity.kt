@@ -1,7 +1,6 @@
 package com.textify.app
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,11 +10,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -27,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -41,7 +36,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.textify.app.ai.stt.SpeechRecognizer
 import com.textify.app.ai.tts.TextToSpeechManager
-import com.textify.app.data.local.entity.UsuarioEntity
 import com.textify.app.data.repository.ConversationRepositoryImpl
 import com.textify.app.data.repository.MessageRepositoryImpl
 import com.textify.app.data.repository.PhraseRepositoryImpl
@@ -51,15 +45,14 @@ import com.textify.app.ui.components.BottomNavBar
 import com.textify.app.ui.screens.splash.SplashScreen
 import com.textify.app.ui.screens.auth.LoginScreen
 import com.textify.app.ui.screens.auth.RegisterScreen
+import com.textify.app.ui.screens.auth.AuthViewModel
 import com.textify.app.ui.screens.chat.ChatScreen
 import com.textify.app.ui.screens.chat.ChatViewModel
 import com.textify.app.ui.screens.phrases.PhrasesScreen
 import com.textify.app.ui.screens.phrases.PhrasesViewModel
 import com.textify.app.ui.screens.profile.ProfileScreen
 import com.textify.app.ui.screens.profile.ProfileViewModel
-import com.textify.app.ui.screens.profile.VoiceGender
 import com.textify.app.ui.theme.TextifyTheme
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -123,6 +116,8 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel, ttsManager: TextToSpee
 
     val activity = LocalContext.current as ComponentActivity
     
+    val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner = activity)
+
     val chatViewModel: ChatViewModel = viewModel(
         viewModelStoreOwner = activity,
         factory = ChatViewModel.Factory(
@@ -190,23 +185,10 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel, ttsManager: TextToSpee
             
             composable(route = Routes.LOGIN) {
                 LoginScreen(
+                    viewModel = authViewModel,
                     onNavigateToHome = {
-                        scope.launch {
-                            // Aseguramos que exista al menos un usuario para evitar Foreign Key error
-                            val existingUser = database.usuarioDao().getUsuarioByCorreo("nicolas@example.com")
-                            if (existingUser == null) {
-                                database.usuarioDao().insertUsuario(
-                                    UsuarioEntity(
-                                        id = "default_user",
-                                        nombre = "Nicolás Vite",
-                                        correo = "nicolas@example.com",
-                                        contrasena = "123456"
-                                    )
-                                )
-                            }
-                            navController.navigate(Routes.CHAT) {
-                                popUpTo(Routes.LOGIN) { inclusive = true }
-                            }
+                        navController.navigate(Routes.CHAT) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
                         }
                     },
                     onNavigateToRegister = {
@@ -217,20 +199,10 @@ fun TextifyNavigation(profileViewModel: ProfileViewModel, ttsManager: TextToSpee
             
             composable(route = Routes.REGISTER) {
                 RegisterScreen(
-                    onRegister = { gender ->
-                        scope.launch {
-                            database.usuarioDao().insertUsuario(
-                                UsuarioEntity(
-                                    id = "default_user",
-                                    nombre = "Usuario Nuevo",
-                                    correo = "nuevo@example.com",
-                                    contrasena = "123456"
-                                )
-                            )
-                            profileViewModel.setVoiceGender(gender)
-                            navController.navigate(Routes.CHAT) {
-                                popUpTo(Routes.REGISTER) { inclusive = true }
-                            }
+                    viewModel = authViewModel,
+                    onNavigateToHome = {
+                        navController.navigate(Routes.CHAT) {
+                            popUpTo(Routes.REGISTER) { inclusive = true }
                         }
                     },
                     onNavigateToLogin = { navController.popBackStack() }

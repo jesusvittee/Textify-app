@@ -117,61 +117,60 @@ class ProfileViewModel(
         if (_uiState.value.isSyncing) return
         
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSyncing = true, syncStatus = "Sincronizando...")
+            _uiState.value = _uiState.value.copy(isSyncing = true, syncStatus = "Iniciando...")
             try {
                 if (pushLocal) {
                     val unsyncedPhrases = db.phraseDao().getUnsyncedPhrases()
                     val unsyncedConvs = db.conversationDao().getUnsyncedConversations()
                     
+                    if (unsyncedPhrases.isEmpty() && unsyncedConvs.isEmpty()) {
+                        _uiState.value = _uiState.value.copy(syncStatus = "Todo está al día")
+                        return@launch
+                    }
+
                     val syncPackage = SyncPackage(
                         phrases = unsyncedPhrases.map { 
-                            PhraseDto(
-                                id = it.id,
-                                usuarioId = it.usuarioId,
-                                text = it.text,
-                                categoria = it.categoria,
-                                isPinned = it.isPinned,
-                                updatedAt = it.updatedAt
-                            ) 
+                            PhraseDto(it.id, it.usuarioId, it.text, it.categoria, it.isPinned, it.updatedAt) 
                         },
                         conversations = unsyncedConvs.map { 
-                            ConversationDto(
-                                id = it.id,
-                                usuarioId = it.usuarioId,
-                                participantName = it.participantName,
-                                lastMessage = it.lastMessage,
-                                lastMessageTime = it.lastMessageTime,
-                                estado = it.estado,
-                                isPinned = it.isPinned,
-                                updatedAt = it.updatedAt
-                            ) 
+                            ConversationDto(it.id, it.usuarioId, it.participantName, it.lastMessage, it.lastMessageTime, it.estado, it.isPinned, it.updatedAt) 
                         }
                     )
-
-                    Log.d("Sync", "Enviando datos a Railway...")
                     
-                    try {
-                        val response = api.pushData("Bearer default_token", syncPackage)
-                        if (response.isSuccessful) {
-                            unsyncedPhrases.forEach { db.phraseDao().insertPhrase(it.copy(isSynced = true)) }
-                            unsyncedConvs.forEach { db.conversationDao().updateConversation(it.copy(isSynced = true)) }
-                            _uiState.value = _uiState.value.copy(syncStatus = "¡Datos subidos con éxito!")
-                        } else {
-                            _uiState.value = _uiState.value.copy(syncStatus = "Error en Railway: ${response.code()}")
-                        }
-                    } catch (e: Exception) {
-                        _uiState.value = _uiState.value.copy(syncStatus = "No se pudo conectar con Railway")
+                    val response = api.pushData("Bearer token", syncPackage)
+                    if (response.isSuccessful) {
+                        unsyncedPhrases.forEach { db.phraseDao().insertPhrase(it.copy(isSynced = true)) }
+                        unsyncedConvs.forEach { db.conversationDao().insertConversation(it.copy(isSynced = true)) } // CORRECCIÓN: insertConversation en lugar de update
+                        _uiState.value = _uiState.value.copy(syncStatus = "¡Subida exitosa!")
+                    } else {
+                        _uiState.value = _uiState.value.copy(syncStatus = "Error: ${response.code()}")
                     }
                 } else {
-                    _uiState.value = _uiState.value.copy(syncStatus = "Descargando datos...")
-                    // Lógica para PULL aquí si la necesitas más adelante
-                    kotlinx.coroutines.delay(1000)
-                    _uiState.value = _uiState.value.copy(syncStatus = "Sincronización completada")
+                    _uiState.value = _uiState.value.copy(syncStatus = "Bajando datos...")
+                    // Enviamos 0 para forzar la descarga de todo lo que el servidor tiene
+                    val response = api.pullData("Bearer token", 0) 
+                    if (response.isSuccessful) {
+                        val data = response.body()
+                        Log.d("Sync", "Recibido: ${data?.phrases?.size} frases y ${data?.conversations?.size} chats")
+                        
+                        data?.phrases?.forEach { dto ->
+                            db.phraseDao().insertPhrase(dto.toEntity())
+                        }
+                        data?.conversations?.forEach { dto ->
+                            db.conversationDao().insertConversation(dto.toEntity()) // CORRECCIÓN: Usar insert para restaurar datos borrados
+                        }
+                        
+                        _uiState.value = _uiState.value.copy(
+                            syncStatus = "¡Descarga completa!",
+                            lastSyncTime = System.currentTimeMillis()
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(syncStatus = "Error al bajar")
+                    }
                 }
-                _uiState.value = _uiState.value.copy(lastSyncTime = System.currentTimeMillis())
             } catch (e: Exception) {
                 Log.e("Sync", "Error: ${e.message}")
-                _uiState.value = _uiState.value.copy(syncStatus = "Error de sincronización")
+                _uiState.value = _uiState.value.copy(syncStatus = "Sin conexión")
             } finally {
                 _uiState.value = _uiState.value.copy(isSyncing = false)
             }
@@ -245,7 +244,6 @@ class ProfileViewModel(
 
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch {
-            // Limpiar datos de sesión aquí si es necesario
             onComplete()
         }
     }

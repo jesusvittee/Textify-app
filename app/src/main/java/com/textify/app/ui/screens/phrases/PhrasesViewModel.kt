@@ -46,7 +46,6 @@ class PhrasesViewModel(
 
     init {
         loadUserData()
-        loadPhrases()
     }
 
     private fun loadUserData() {
@@ -54,6 +53,7 @@ class PhrasesViewModel(
             db.usuarioDao().getUsuario().collect { user ->
                 user?.let {
                     _uiState.value = _uiState.value.copy(userId = it.id)
+                    observePhrases(it.id) // Iniciamos la observación con el ID real
                 }
             }
         }
@@ -66,14 +66,14 @@ class PhrasesViewModel(
         )
     }
 
-    private fun loadPhrases() {
+    private fun observePhrases(userId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            try {
-                val phrases = getPhrasesUseCase()
-                _uiState.value = _uiState.value.copy(phrases = phrases, isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message, isLoading = false)
+            getPhrasesUseCase(userId).collect { phrases ->
+                _uiState.value = _uiState.value.copy(
+                    phrases = phrases,
+                    isLoading = false
+                )
             }
         }
     }
@@ -88,7 +88,6 @@ class PhrasesViewModel(
                     usuarioId = _uiState.value.userId
                 )
                 addPhraseUseCase(newPhrase)
-                loadPhrases()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
@@ -99,7 +98,6 @@ class PhrasesViewModel(
         viewModelScope.launch {
             try {
                 deletePhraseUseCase(phraseId)
-                loadPhrases()
                 _uiState.value = _uiState.value.copy(
                     selectedPhraseIds = _uiState.value.selectedPhraseIds - phraseId
                 )
@@ -116,7 +114,6 @@ class PhrasesViewModel(
                     deletePhraseUseCase(id)
                 }
                 _uiState.value = _uiState.value.copy(selectedPhraseIds = emptySet())
-                loadPhrases()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }

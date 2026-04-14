@@ -21,6 +21,9 @@ interface ConversationDao {
     @Query("DELETE FROM conversations WHERE id = :conversationId")
     suspend fun deleteConversation(conversationId: String)
 
+    @Query("DELETE FROM conversations WHERE usuarioId = :usuarioId")
+    suspend fun deleteAllConversationsByUsuario(usuarioId: String)
+
     @Query("SELECT * FROM conversations WHERE isSynced = 0")
     suspend fun getUnsyncedConversations(): List<ConversationEntity>
 }

@@ -14,15 +14,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.textify.app.ui.screens.profile.VoiceGender
 import com.textify.app.ui.theme.*
 
 @Composable
-fun RegisterScreen(onRegister: (VoiceGender) -> Unit, onNavigateToLogin: () -> Unit) {
+fun RegisterScreen(
+    viewModel: AuthViewModel,
+    onNavigateToHome: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var selectedGender by remember { mutableStateOf(VoiceGender.FEMALE) }
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -53,7 +59,8 @@ fun RegisterScreen(onRegister: (VoiceGender) -> Unit, onNavigateToLogin: () -> U
                 focusedTextColor = FondoClaro,
                 unfocusedTextColor = FondoClaro
             ),
-            singleLine = true
+            singleLine = true,
+            enabled = authState !is AuthState.Loading
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -70,7 +77,8 @@ fun RegisterScreen(onRegister: (VoiceGender) -> Unit, onNavigateToLogin: () -> U
                 focusedTextColor = FondoClaro,
                 unfocusedTextColor = FondoClaro
             ),
-            singleLine = true
+            singleLine = true,
+            enabled = authState !is AuthState.Loading
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -88,7 +96,8 @@ fun RegisterScreen(onRegister: (VoiceGender) -> Unit, onNavigateToLogin: () -> U
                 focusedTextColor = FondoClaro,
                 unfocusedTextColor = FondoClaro
             ),
-            singleLine = true
+            singleLine = true,
+            enabled = authState !is AuthState.Loading
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -121,24 +130,41 @@ fun RegisterScreen(onRegister: (VoiceGender) -> Unit, onNavigateToLogin: () -> U
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        if (authState is AuthState.Error) {
+            Text(
+                text = (authState as AuthState.Error).error,
+                color = Rojo,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
         Button(
-            onClick = { onRegister(selectedGender) },
+            onClick = { viewModel.register(name, email, password, selectedGender.name, onNavigateToHome) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Verde)
+            colors = ButtonDefaults.buttonColors(containerColor = Verde),
+            enabled = authState !is AuthState.Loading && name.isNotBlank() && email.isNotBlank() && password.isNotBlank()
         ) {
-            Text(
-                text = "Registrarme",
-                color = AzulOscuro,
-                fontWeight = FontWeight.Medium
-            )
+            if (authState is AuthState.Loading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AzulOscuro)
+            } else {
+                Text(
+                    text = "Registrarme",
+                    color = AzulOscuro,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextButton(onClick = onNavigateToLogin) {
+        TextButton(
+            onClick = onNavigateToLogin,
+            enabled = authState !is AuthState.Loading
+        ) {
             Text(
                 text = "¿Ya tienes cuenta? Inicia sesión",
                 color = AzulClaro,

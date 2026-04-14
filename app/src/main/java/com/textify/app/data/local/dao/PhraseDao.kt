@@ -21,6 +21,9 @@ interface PhraseDao {
     @Query("DELETE FROM phrases WHERE id = :phraseId")
     suspend fun deletePhraseById(phraseId: String)
 
+    @Query("DELETE FROM phrases WHERE usuarioId = :usuarioId")
+    suspend fun deleteAllPhrasesByUsuario(usuarioId: String)
+
     @Query("SELECT * FROM phrases WHERE isSynced = 0")
     suspend fun getUnsyncedPhrases(): List<PhraseEntity>
 }

@@ -5,7 +5,7 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface TextifyApiService {
-    // Auth
+    // Auth - Rutas que acabamos de agregar al servidor
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
