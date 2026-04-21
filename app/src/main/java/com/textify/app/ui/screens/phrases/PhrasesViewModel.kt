@@ -9,16 +9,16 @@ import com.textify.app.domain.usecase.DeletePhraseUseCase
 import com.textify.app.domain.usecase.GetPhrasesUseCase
 import com.textify.app.domain.usecase.PlayPhraseUseCase
 import com.textify.app.ui.screens.profile.VoiceGender
-import com.textify.app.data.local.database.AppDatabase
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class PhrasesUiState(
-    val userId: String = "default_user",
+    val userId: String = "", // ELIMINADO "default_user"
     val phrases: List<Phrase> = emptyList(),
     val selectedPhraseIds: Set<String> = emptySet(),
     val isPlaying: Boolean = false,
@@ -45,16 +45,16 @@ class PhrasesViewModel(
     private val db = (application as com.textify.app.TextifyApp).database
 
     init {
-        loadUserData()
+        loadUserDataAndPhrases()
     }
 
-    private fun loadUserData() {
+    private fun loadUserDataAndPhrases() {
         viewModelScope.launch {
-            db.usuarioDao().getUsuario().collect { user ->
-                user?.let {
-                    _uiState.value = _uiState.value.copy(userId = it.id)
-                    observePhrases(it.id) // Iniciamos la observación con el ID real
-                }
+            // Obtenemos el usuario real primero
+            val user = db.usuarioDao().getUsuario().first()
+            user?.let {
+                _uiState.value = _uiState.value.copy(userId = it.id)
+                observePhrases(it.id)
             }
         }
     }
@@ -80,12 +80,15 @@ class PhrasesViewModel(
 
     fun addPhrase(text: String) {
         if (text.isBlank()) return
+        val userId = _uiState.value.userId
+        if (userId.isEmpty()) return // No guardamos si no hay usuario real
+
         viewModelScope.launch {
             try {
                 val newPhrase = Phrase(
                     id = UUID.randomUUID().toString(),
                     text = text,
-                    usuarioId = _uiState.value.userId
+                    usuarioId = userId
                 )
                 addPhraseUseCase(newPhrase)
             } catch (e: Exception) {

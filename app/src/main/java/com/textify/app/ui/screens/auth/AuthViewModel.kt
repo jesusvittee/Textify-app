@@ -63,7 +63,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Error(errorMsg ?: "Error: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error("Error de conexión: ${e.message}")
+                _authState.value = AuthState.Error("Error de conexión")
             }
         }
     }
@@ -71,9 +71,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private fun parseError(errorBody: String?): String? {
         return try {
             errorBody?.let { JSONObject(it).getString("error") }
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     private suspend fun saveSession(token: String, userId: String, name: String, email: String, password: String) {
@@ -83,6 +81,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             putBoolean(Constants.KEY_IS_LOGGED_IN, true)
             apply()
         }
+        
+        // LIMPIEZA CRÍTICA: Borramos cualquier usuario anterior (como default_user)
+        db.usuarioDao().clearUsuarios()
         
         db.usuarioDao().insertUsuario(
             UsuarioEntity(

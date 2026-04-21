@@ -20,4 +20,7 @@ interface UsuarioDao {
 
     @Query("SELECT * FROM usuarios WHERE isSynced = 0")
     suspend fun getUnsyncedUsuarios(): List<UsuarioEntity>
+
+    @Query("DELETE FROM usuarios")
+    suspend fun clearUsuarios()
 }

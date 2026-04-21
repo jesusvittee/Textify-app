@@ -17,11 +17,12 @@ import com.textify.app.ui.screens.profile.VoiceGender
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class ChatUiState(
-    val userId: String = "default_user",
+    val userId: String = "", // ELIMINADO "default_user"
     val messages: List<Message> = emptyList(),
     val conversations: List<ConversationEntity> = emptyList(),
     val currentConversation: ConversationEntity? = null,
@@ -53,16 +54,16 @@ class ChatViewModel(
     private val db = (application as com.textify.app.TextifyApp).database
 
     init {
-        loadUserData()
-        loadConversations()
+        loadUserDataAndConversations()
     }
 
-    private fun loadUserData() {
+    private fun loadUserDataAndConversations() {
         viewModelScope.launch {
-            db.usuarioDao().getUsuario().collect { user ->
-                if (user != null) {
-                    _uiState.value = _uiState.value.copy(userId = user.id)
-                }
+            // Obtenemos el usuario real primero
+            val user = db.usuarioDao().getUsuario().first()
+            user?.let {
+                _uiState.value = _uiState.value.copy(userId = it.id)
+                loadConversations(it.id)
             }
         }
     }
@@ -74,13 +75,15 @@ class ChatViewModel(
         )
     }
 
-    private fun loadConversations() {
+    private fun loadConversations(userId: String) {
         viewModelScope.launch {
             getConversationsUseCase().collectLatest { list ->
-                val filteredList = list.filter { it.lastMessage.isNotEmpty() }
+                // Filtramos SOLO lo que pertenece a este usuario
+                val filteredList = list.filter { it.usuarioId == userId && it.lastMessage.isNotEmpty() }
                 _uiState.value = _uiState.value.copy(conversations = filteredList)
-                if (_uiState.value.currentConversation == null) {
-                    createNewConversation("Textify")
+                
+                if (_uiState.value.currentConversation == null && filteredList.isNotEmpty()) {
+                    selectConversation(filteredList[0].id)
                 }
             }
         }
@@ -92,24 +95,25 @@ class ChatViewModel(
 
     fun sendMessage(text: String, type: MessageType = MessageType.TEXT, isOwn: Boolean = true) {
         if (text.isBlank()) return
-        
+        val userId = _uiState.value.userId
+        if (userId.isEmpty()) return
+
         viewModelScope.launch {
             try {
-                val userId = _uiState.value.userId
                 var currentConversation = _uiState.value.currentConversation
                 
-                // Si es una conversación nueva, la creamos primero
                 if (currentConversation == null || _uiState.value.messages.isEmpty()) {
                     val newId = currentConversation?.id ?: UUID.randomUUID().toString()
-                    val updatedName = if (currentConversation?.participantName == "Textify" || currentConversation == null) 
+                    val updatedName = if (currentConversation?.participantName == "Nueva conversación" || currentConversation == null) 
                         text.take(20) else currentConversation.participantName
                     
                     val convToSave = ConversationEntity(
                         id = newId,
-                        usuarioId = userId,
+                        usuarioId = userId, // ID Real
                         participantName = updatedName,
                         lastMessage = text,
-                        lastMessageTime = System.currentTimeMillis()
+                        lastMessageTime = System.currentTimeMillis(),
+                        isSynced = false
                     )
                     createConversationUseCase(convToSave)
                     currentConversation = convToSave
@@ -129,12 +133,12 @@ class ChatViewModel(
                 
                 updateConversationUseCase(currentConversation.copy(
                     lastMessage = text,
-                    lastMessageTime = System.currentTimeMillis()
+                    lastMessageTime = System.currentTimeMillis(),
+                    isSynced = false
                 ))
                 
                 loadMessages(currentConversation.id)
             } catch (e: Exception) {
-                Log.e("ChatViewModel", "Error enviando mensaje: ${e.message}")
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
@@ -161,13 +165,17 @@ class ChatViewModel(
     }
 
     fun createConversation(title: String) {
+        val userId = _uiState.value.userId
+        if (userId.isEmpty()) return
+        
         viewModelScope.launch {
             val newConv = ConversationEntity(
                 id = UUID.randomUUID().toString(),
-                usuarioId = _uiState.value.userId,
+                usuarioId = userId,
                 participantName = title,
                 lastMessage = "",
-                lastMessageTime = System.currentTimeMillis()
+                lastMessageTime = System.currentTimeMillis(),
+                isSynced = false
             )
             createConversationUseCase(newConv)
             _uiState.value = _uiState.value.copy(currentConversation = newConv, messages = emptyList())
@@ -175,16 +183,15 @@ class ChatViewModel(
     }
     
     fun createNewConversation(title: String) {
-        viewModelScope.launch {
-            val newConv = ConversationEntity(
-                id = UUID.randomUUID().toString(),
-                usuarioId = _uiState.value.userId,
-                participantName = title,
-                lastMessage = "",
-                lastMessageTime = System.currentTimeMillis()
-            )
-            _uiState.value = _uiState.value.copy(currentConversation = newConv, messages = emptyList())
-        }
+        val userId = _uiState.value.userId
+        val newConv = ConversationEntity(
+            id = UUID.randomUUID().toString(),
+            usuarioId = userId,
+            participantName = title,
+            lastMessage = "",
+            lastMessageTime = System.currentTimeMillis()
+        )
+        _uiState.value = _uiState.value.copy(currentConversation = newConv, messages = emptyList())
     }
 
     fun deleteConversation(id: String) {
@@ -194,7 +201,7 @@ class ChatViewModel(
     fun renameConversation(id: String, newName: String) {
         viewModelScope.launch {
             _uiState.value.conversations.find { it.id == id }?.let {
-                updateConversationUseCase(it.copy(participantName = newName))
+                updateConversationUseCase(it.copy(participantName = newName, isSynced = false))
             }
         }
     }
@@ -202,7 +209,7 @@ class ChatViewModel(
     fun togglePinConversation(id: String) {
         viewModelScope.launch {
             _uiState.value.conversations.find { it.id == id }?.let {
-                updateConversationUseCase(it.copy(isPinned = !it.isPinned))
+                updateConversationUseCase(it.copy(isPinned = !it.isPinned, isSynced = false))
             }
         }
     }
