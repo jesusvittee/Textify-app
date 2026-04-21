@@ -12,6 +12,9 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE usuarioId = :usuarioId ORDER BY isPinned DESC, lastMessageTime DESC")
     fun getConversationsByUsuario(usuarioId: String): Flow<List<ConversationEntity>>
 
+    @Query("SELECT * FROM conversations WHERE usuarioId = :usuarioId")
+    suspend fun getConversationsByUsuarioSync(usuarioId: String): List<ConversationEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversation(conversation: ConversationEntity)
 

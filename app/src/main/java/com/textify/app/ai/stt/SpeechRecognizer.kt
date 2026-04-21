@@ -37,16 +37,17 @@ class SpeechRecognizer(private val context: Context) {
         onError: (String) -> Unit
     ) {
         mainHandler.post {
+            // PRIMERO: Detenemos cualquier instancia previa
+            stopListening()
+            
             if (NetworkUtils.isOnline(context)) {
                 isUsingOffline = false
                 startGoogle(onReady, onResult, onError)
             } else if (offlineService.isModelReady()) {
                 isUsingOffline = true
                 onReady()
-                // Llamamos a startListening del servicio offline
                 offlineService.startListening(
                     onResult = { text ->
-                        // Aseguramos que el resultado llegue al hilo principal para la UI
                         mainHandler.post { onResult(text) }
                     },
                     onError = { err ->
@@ -60,30 +61,48 @@ class SpeechRecognizer(private val context: Context) {
     }
 
     private fun startGoogle(onReady: () -> Unit, onResult: (String) -> Unit, onError: (String) -> Unit) {
-        stopGoogle()
         googleRecognizer = AndroidSpeechRecognizer.createSpeechRecognizer(context)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-MX")
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // AÑADIDO: Forzar a que no se detenga tan rápido
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1500L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000L)
         }
 
         googleRecognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) = onReady()
+            
             override fun onResults(results: Bundle?) {
                 val matches = results?.getStringArrayList(AndroidSpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) onResult(matches[0])
+                if (!matches.isNullOrEmpty()) {
+                    onResult(matches[0])
+                }
             }
+            
             override fun onPartialResults(partialResults: Bundle?) {
                 val matches = partialResults?.getStringArrayList(AndroidSpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) onResult(matches[0])
+                if (!matches.isNullOrEmpty()) {
+                    onResult(matches[0])
+                }
             }
+            
             override fun onError(error: Int) {
+                Log.e("STT", "Error Google: $error")
+                // Ignorar el error 7 (No match) mientras se está grabando, para que no corte
+                if (error == AndroidSpeechRecognizer.ERROR_NO_MATCH) return
+                
                 if (error == AndroidSpeechRecognizer.ERROR_NETWORK || error == AndroidSpeechRecognizer.ERROR_NETWORK_TIMEOUT) {
-                    if (offlineService.isModelReady()) startListening(onReady, onResult, onError)
-                    else onError("Error de red.")
-                } else onError("Error de voz: $error")
+                    if (offlineService.isModelReady()) {
+                        isUsingOffline = true
+                        startListening(onReady, onResult, onError)
+                    } else onError("Error de red.")
+                } else {
+                    onError("Error de voz: $error")
+                }
             }
+            
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
@@ -95,12 +114,15 @@ class SpeechRecognizer(private val context: Context) {
 
     fun stopListening() {
         mainHandler.post {
-            if (isUsingOffline) offlineService.stop()
-            else stopGoogle()
+            if (isUsingOffline) {
+                offlineService.stop()
+            }
+            stopGoogle()
         }
     }
 
     private fun stopGoogle() {
+        googleRecognizer?.stopListening()
         googleRecognizer?.cancel()
         googleRecognizer?.destroy()
         googleRecognizer = null

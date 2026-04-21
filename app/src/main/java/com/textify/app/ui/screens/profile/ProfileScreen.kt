@@ -39,6 +39,10 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    // Estados para diálogos de confirmación de sincronización
+    var showPushConfirmDialog by remember { mutableStateOf(false) }
+    var showPullConfirmDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -99,9 +103,9 @@ fun ProfileScreen(
                 }
             }
 
-            // --- NUEVO APARTADO: CUENTA Y NUBE ---
+            // --- NUEVO APARTADO: SINCRONIZACIÓN REMOTA ---
             item {
-                SectionCard("CUENTA Y NUBE") {
+                SectionCard("SINCRONIZACIÓN REMOTA") {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -110,7 +114,7 @@ fun ProfileScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Sincronización remota",
+                                    "Estado de la nube",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -120,19 +124,15 @@ fun ProfileScreen(
                                     fontSize = 12.sp,
                                     color = if(uiState.syncStatus.contains("Error")) Rojo else AzulMedio
                                 )
-                                if (uiState.lastSyncTime > 0) {
-                                    val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(uiState.lastSyncTime))
-                                    Text("Última vez: $date", fontSize = 11.sp, color = TextoMuted)
-                                }
                             }
                             
                             if (uiState.isSyncing) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = AzulMedio)
                             } else {
                                 Icon(
-                                    imageVector = if(uiState.lastSyncTime > 0) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                                    imageVector = Icons.Default.CloudSync,
                                     contentDescription = null,
-                                    tint = if(uiState.lastSyncTime > 0) Verde else TextoMuted
+                                    tint = AzulMedio
                                 )
                             }
                         }
@@ -140,42 +140,32 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            // BOTÓN: SUBIR A LA NUBE (PUSH)
+                            // BOTÓN: SUBIR
                             Button(
-                                onClick = { viewModel.performSync(pushLocal = true) },
+                                onClick = { showPushConfirmDialog = true },
                                 modifier = Modifier.weight(1f),
                                 enabled = !uiState.isSyncing,
                                 colors = ButtonDefaults.buttonColors(containerColor = Verde),
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(0.dp)
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Subir", fontSize = 13.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Subir", fontWeight = FontWeight.Bold)
                             }
 
-                            // BOTÓN: DESCARGAR DE LA NUBE (PULL)
+                            // BOTÓN: BAJAR
                             Button(
-                                onClick = { viewModel.performSync(pushLocal = false) },
+                                onClick = { showPullConfirmDialog = true },
                                 modifier = Modifier.weight(1f),
                                 enabled = !uiState.isSyncing,
                                 colors = ButtonDefaults.buttonColors(containerColor = AzulMedio),
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(0.dp)
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Bajar", fontSize = 13.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Bajar", fontWeight = FontWeight.Bold)
                             }
                         }
-                        
-                        Text(
-                            "\"Bajar\" sobrescribirá tus cambios locales con lo que hay en la nube.",
-                            fontSize = 11.sp,
-                            color = TextoMuted,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                        )
                     }
                 }
             }
@@ -374,6 +364,38 @@ fun ProfileScreen(
         }
     }
 
+    // --- DIÁLOGOS DE CONFIRMACIÓN ---
+
+    if (showPushConfirmDialog) {
+        CustomAlertDialog(
+            title = "¿Subir a la nube?",
+            message = "Esta acción reemplazará los datos de la nube con los de tu dispositivo. Los datos antiguos en la nube se borrarán.",
+            icon = Icons.Default.CloudUpload,
+            confirmText = "Subir ahora",
+            confirmColor = Verde,
+            onConfirm = {
+                showPushConfirmDialog = false
+                viewModel.performSync(pushLocal = true)
+            },
+            onDismiss = { showPushConfirmDialog = false }
+        )
+    }
+
+    if (showPullConfirmDialog) {
+        CustomAlertDialog(
+            title = "¿Bajar de la nube?",
+            message = "Se descargarán los datos de la nube y se sobrescribirá tu información local actual. No podrás deshacer este cambio.",
+            icon = Icons.Default.CloudDownload,
+            confirmText = "Bajar ahora",
+            confirmColor = AzulMedio,
+            onConfirm = {
+                showPullConfirmDialog = false
+                viewModel.performSync(pushLocal = false)
+            },
+            onDismiss = { showPullConfirmDialog = false }
+        )
+    }
+
     if (showLogoutDialog) {
         CustomAlertDialog(
             title = "¿Cerrar sesión?",
@@ -396,9 +418,9 @@ fun ProfileScreen(
     if (showDeleteDialog) {
         CustomAlertDialog(
             title = "¿Eliminar cuenta?",
-            message = "Esta acción es permanente y eliminará todos tus datos.",
+            message = "Esta acción es permanente y eliminará todos tus datos tanto locales como en la nube.",
             icon = Icons.Default.DeleteForever,
-            confirmText = "Eliminar",
+            confirmText = "Eliminar permanentemente",
             confirmColor = Rojo,
             onConfirm = { showDeleteDialog = false },
             onDismiss = { showDeleteDialog = false }

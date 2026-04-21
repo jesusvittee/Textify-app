@@ -2,6 +2,7 @@ package com.textify.app.ui.screens.auth
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.textify.app.data.local.entity.UsuarioEntity
@@ -43,7 +44,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Error(errorMsg ?: "Error: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error("No se pudo conectar al servidor")
+                _authState.value = AuthState.Error("Error de conexión: ${e.localizedMessage}")
+                Log.e("Auth", "Login failed", e)
             }
         }
     }
@@ -60,10 +62,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     onSuccess()
                 } else {
                     val errorMsg = parseError(response.errorBody()?.string())
-                    _authState.value = AuthState.Error(errorMsg ?: "Error: ${response.code()}")
+                    _authState.value = AuthState.Error(errorMsg ?: "Error del servidor: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error("Error de conexión")
+                _authState.value = AuthState.Error("Fallo de red: ${e.localizedMessage}")
+                Log.e("Auth", "Registration failed", e)
             }
         }
     }
@@ -81,18 +84,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             putBoolean(Constants.KEY_IS_LOGGED_IN, true)
             apply()
         }
-        
-        // LIMPIEZA CRÍTICA: Borramos cualquier usuario anterior (como default_user)
         db.usuarioDao().clearUsuarios()
-        
         db.usuarioDao().insertUsuario(
-            UsuarioEntity(
-                id = userId,
-                nombre = name,
-                correo = email,
-                contrasena = password,
-                fechaRegistro = System.currentTimeMillis()
-            )
+            UsuarioEntity(id = userId, nombre = name, correo = email, contrasena = password)
         )
     }
 }

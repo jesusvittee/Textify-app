@@ -40,6 +40,8 @@ import com.textify.app.ui.components.MessageBubble
 import com.textify.app.ui.screens.profile.ProfileViewModel
 import com.textify.app.ui.theme.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +104,7 @@ fun ChatScreen(
                         scope.launch { drawerState.close() }
                     },
                     onNewConversation = {
-                        viewModel.createNewConversation("Textify")
+                        viewModel.createNewConversation("Nueva conversación")
                         scope.launch { drawerState.close() }
                     },
                     onDelete = { id ->
@@ -147,6 +149,10 @@ fun ChatScreen(
                             if (hasPermission) viewModel.startListening() else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         },
                         onConfirmAudio = {
+                            viewModel.stopAndSend()
+                            textoInput = ""
+                        },
+                        onConfirmAudioClick = {
                             viewModel.stopAndSend()
                             textoInput = ""
                         },
@@ -207,6 +213,7 @@ fun ChatBottomBar(
     onSend: () -> Unit,
     onMicClick: () -> Unit,
     onConfirmAudio: () -> Unit,
+    onConfirmAudioClick: () -> Unit,
     onCancelAudio: () -> Unit
 ) {
     Surface(
@@ -244,7 +251,7 @@ fun ChatBottomBar(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 FloatingActionButton(
-                    onClick = onConfirmAudio,
+                    onClick = onConfirmAudioClick,
                     containerColor = Verde,
                     contentColor = Color.White,
                     shape = CircleShape,
@@ -365,7 +372,16 @@ fun ConversationItem(
                 if (conversation.isPinned) {
                     Icon(Icons.Default.PushPin, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.secondary)
                 }
-                Text(text = "Ayer", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                
+                // Formatear la hora real en lugar de mostrar "Ayer" estático
+                val timeStr = remember(conversation.lastMessageTime) {
+                    if (conversation.lastMessageTime == 0L) ""
+                    else {
+                        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+                        sdf.format(Date(conversation.lastMessageTime))
+                    }
+                }
+                Text(text = timeStr, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

@@ -1,6 +1,10 @@
 package com.textify.app.data.remote.dto
 
+import com.google.gson.annotations.JsonAdapter
+import com.google.gson.annotations.SerializedName
 import com.textify.app.data.local.entity.*
+import com.textify.app.data.util.BooleanTypeAdapter
+import com.textify.app.domain.model.Message
 
 data class UsuarioDto(
     val id: String,
@@ -34,6 +38,8 @@ data class PhraseDto(
     val usuarioId: String,
     val text: String,
     val categoria: String?,
+    @SerializedName("pinned")
+    @JsonAdapter(BooleanTypeAdapter::class)
     val isPinned: Boolean,
     val updatedAt: Long
 )
@@ -45,6 +51,8 @@ data class ConversationDto(
     val lastMessage: String,
     val lastMessageTime: Long,
     val estado: String,
+    @SerializedName("pinned")
+    @JsonAdapter(BooleanTypeAdapter::class)
     val isPinned: Boolean,
     val updatedAt: Long
 )
@@ -53,7 +61,9 @@ data class SyncMessageDto(
     val id: String,
     val conversationId: String,
     val text: String,
-    val emisor: String,
+    @SerializedName("isOwn")
+    @JsonAdapter(BooleanTypeAdapter::class)
+    val isOwn: Boolean,
     val timestamp: Long,
     val updatedAt: Long
 )
@@ -79,4 +89,13 @@ fun ConversationDto.toEntity() = ConversationEntity(
     isPinned = isPinned,
     updatedAt = updatedAt,
     isSynced = true
+)
+
+fun MessageDto.toEntity() = MessageEntity(
+    id = id,
+    conversationId = conversationId,
+    text = text,
+    isOwn = isOwn,
+    timestamp = timestamp,
+    updatedAt = updatedAt
 )
