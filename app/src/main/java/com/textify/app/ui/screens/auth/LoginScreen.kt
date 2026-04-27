@@ -23,8 +23,9 @@ fun LoginScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    // Valores predeterminados para desarrollo
+    var email by remember { mutableStateOf("nicolasvitejesus@gmail.com") }
+    var password by remember { mutableStateOf("Awe12lo34") }
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 

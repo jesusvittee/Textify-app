@@ -29,6 +29,12 @@ interface TextifyApiService {
         @Header("Authorization") token: String,
         @Path("userId") userId: String
     ): Response<Unit>
+
+    @DELETE("api/auth/delete/{userId}")
+    suspend fun deleteAccount(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): Response<Unit>
 }
 
 data class LoginRequest(val correo: String, val contrasena: String)

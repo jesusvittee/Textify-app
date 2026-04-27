@@ -103,7 +103,7 @@ fun ProfileScreen(
                 }
             }
 
-            // --- NUEVO APARTADO: SINCRONIZACIÓN REMOTA ---
+            // --- SINCRONIZACIÓN REMOTA ---
             item {
                 SectionCard("SINCRONIZACIÓN REMOTA") {
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -140,7 +140,6 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            // BOTÓN: SUBIR
                             Button(
                                 onClick = { showPushConfirmDialog = true },
                                 modifier = Modifier.weight(1f),
@@ -153,7 +152,6 @@ fun ProfileScreen(
                                 Text("Subir", fontWeight = FontWeight.Bold)
                             }
 
-                            // BOTÓN: BAJAR
                             Button(
                                 onClick = { showPullConfirmDialog = true },
                                 modifier = Modifier.weight(1f),
@@ -298,44 +296,13 @@ fun ProfileScreen(
                         VoiceItem(
                             voice = voice,
                             selected = uiState.selectedVoiceId == voice.id,
-                            onClick = { viewModel.setSelectedVoice(voice.id) }
+                            onClick = { 
+                                viewModel.setSelectedVoice(voice.id)
+                                viewModel.playVoicePreview(voice)
+                            }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
-
-                    SettingsSegmentedRow(
-                        label = "Velocidad TTS",
-                        options = listOf("Lenta", "Normal", "Rápida"),
-                        selectedIndex = when(uiState.ttsSpeed) {
-                            TtsSpeed.SLOW -> 0
-                            TtsSpeed.NORMAL -> 1
-                            TtsSpeed.FAST -> 2
-                        },
-                        onSelect = {
-                            viewModel.setTtsSpeed(when(it) {
-                                0 -> TtsSpeed.SLOW
-                                1 -> TtsSpeed.NORMAL
-                                else -> TtsSpeed.FAST
-                            })
-                        }
-                    )
-                    
-                    SettingsSwitchRow(
-                        label = "Alertas hápticas",
-                        checked = uiState.hapticAlerts,
-                        onCheckedChange = { viewModel.toggleHapticAlerts(it) }
-                    )
-                }
-            }
-
-            // Privacidad
-            item {
-                SectionCard("PRIVACIDAD") {
-                    SettingsSwitchRow(
-                        label = "Historial local",
-                        checked = uiState.localHistory,
-                        onCheckedChange = { viewModel.toggleLocalHistory(it) }
-                    )
                 }
             }
 
@@ -541,39 +508,6 @@ fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
                 uncheckedTrackColor = FondoGris
             )
         )
-    }
-}
-
-@Composable
-fun SettingsSegmentedRow(label: String, options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
-        Row(
-            modifier = Modifier
-                .background(if(MaterialTheme.colorScheme.primary == AzulOscuro) Color(0xFFF0F2F5) else SuperficieOscura2, RoundedCornerShape(12.dp))
-                .padding(4.dp)
-        ) {
-            options.forEachIndexed { index, text ->
-                Surface(
-                    modifier = Modifier.clickable { onSelect(index) },
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (selectedIndex == index) (if(MaterialTheme.colorScheme.primary == AzulOscuro) Color.White else AzulMedio) else Color.Transparent,
-                    shadowElevation = if (selectedIndex == index) 2.dp else 0.dp
-                ) {
-                    Text(
-                        text = text,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (selectedIndex == index) (if(MaterialTheme.colorScheme.primary == AzulOscuro) AzulMedio else Color.White) else TextoMuted
-                    )
-                }
-            }
-        }
     }
 }
 
