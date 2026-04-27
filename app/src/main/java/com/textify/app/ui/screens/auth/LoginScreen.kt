@@ -29,6 +29,8 @@ fun LoginScreen(
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 
+    val isFormValid = email.isNotBlank() && password.isNotBlank()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -117,13 +119,22 @@ fun LoginScreen(
 
         // Botón Entrar
         Button(
-            onClick = { viewModel.login(email, password, onNavigateToHome) },
+            onClick = { 
+                if (isFormValid) {
+                    viewModel.login(email, password, onNavigateToHome) 
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Verde),
-            enabled = authState !is AuthState.Loading && email.isNotBlank() && password.isNotBlank()
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isFormValid) Verde else Verde.copy(alpha = 0.4f),
+                contentColor = AzulOscuro,
+                disabledContainerColor = Verde.copy(alpha = 0.4f),
+                disabledContentColor = AzulOscuro.copy(alpha = 0.5f)
+            ),
+            enabled = authState !is AuthState.Loading
         ) {
             if (authState is AuthState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AzulOscuro)

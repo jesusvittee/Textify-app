@@ -30,6 +30,8 @@ fun RegisterScreen(
     var selectedGender by remember { mutableStateOf(VoiceGender.FEMALE) }
     val authState by viewModel.authState.collectAsStateWithLifecycle()
 
+    val isFormValid = name.isNotBlank() && email.isNotBlank() && password.isNotBlank()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -140,13 +142,22 @@ fun RegisterScreen(
         }
 
         Button(
-            onClick = { viewModel.register(name, email, password, selectedGender.name, onNavigateToHome) },
+            onClick = { 
+                if (isFormValid) {
+                    viewModel.register(name, email, password, selectedGender.name, onNavigateToHome) 
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Verde),
-            enabled = authState !is AuthState.Loading && name.isNotBlank() && email.isNotBlank() && password.isNotBlank()
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isFormValid) Verde else Verde.copy(alpha = 0.4f),
+                contentColor = AzulOscuro,
+                disabledContainerColor = Verde.copy(alpha = 0.4f),
+                disabledContentColor = AzulOscuro.copy(alpha = 0.5f)
+            ),
+            enabled = authState !is AuthState.Loading
         ) {
             if (authState is AuthState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AzulOscuro)

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">textify</string>
+    <string name="textify_logo_description">Logo de Textify</string>
 </resources>

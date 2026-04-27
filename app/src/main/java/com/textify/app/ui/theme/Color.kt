@@ -7,6 +7,9 @@ val AzulOscuro = Color(0xFF053E62)
 val AzulMedio = Color(0xFF1F6AA5)
 val AzulClaro = Color(0xFF6FA8DC)
 
+// Logo Color
+val LogoBlue = Color(0xFF001A94)
+
 // Acento
 val Verde = Color(0xFF2ECC71)
 val VerdeClaro = Color(0xFFE8F8F0) // Para el chip de estado
